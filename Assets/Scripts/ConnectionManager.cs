@@ -1,4 +1,5 @@
 ﻿using System;
+using Dman.Utilities;
 using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -12,25 +13,68 @@ using UnityEngine;
 
 public class ConnectionManager : MonoBehaviour
 {
-
-    public NetworkManager networkManager;
-    
     string autoSelectRegionName = "auto-select (QoS)";
+    
+    public string hostConnectJoinCode = string.Empty; 
     
     public async Awaitable Start()
     {
-
         // Initialize Unity Services
         await UnityServices.InitializeAsync();
     }
 
 
+    private ConnectionState connectionState = ConnectionState.Disconnected;
+    public bool IsConnecting => connectionState == ConnectionState.Connecting;
+    public bool IsConnected => connectionState == ConnectionState.ConnectedHost || connectionState == ConnectionState.ConnectedClient;
+    public bool IsDisconnected => connectionState == ConnectionState.Disconnected;
+    
+    public bool IsHost
+    {
+        get
+        {
+            if (connectionState != ConnectionState.ConnectedHost) return false;
+            if (!NetworkManager.Singleton.IsHost)
+            {
+                Debug.LogError("Connection state is connected host, but network manager is not host");
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    public enum ConnectionState
+    {
+        Disconnected,
+        Connecting,
+        ConnectedHost,
+        ConnectedClient,
+    }
+    
+    private IDisposable DisconnectIfStillConnecting()
+    {
+        return new DisposableAbuse.LambdaDispose(() =>
+        {
+            if (IsConnecting)
+            {
+                connectionState = ConnectionState.Disconnected;
+                Debug.LogWarning("Connection could not complete. returning to disconnected state.");
+            }
+        });
+    }
+    
     /// <summary>
     /// connect as a host. returns the join code.
     /// </summary>
     /// <returns></returns>
     public async Awaitable<string> OnConnectAsHost()
     {
+        if (!IsDisconnected) throw new InvalidOperationException("already connected or connecting");
+        connectionState = ConnectionState.Connecting;
+        hostConnectJoinCode = string.Empty;
+        using var _1 = DisconnectIfStillConnecting();
+        
         var playerId = await SignIn();
         
         Debug.Log($"Signed in. Player ID: {playerId}");
@@ -59,11 +103,19 @@ public class ConnectionManager : MonoBehaviour
 
         NetworkManager.Singleton.StartHost();
 
+        Debug.Log($"Host - Started host successfully, setting to connected host. join code is {joinCode}");
+        connectionState = ConnectionState.ConnectedHost;
+        
+        hostConnectJoinCode = joinCode;
         return joinCode;
     }
 
     public async Awaitable OnConnectAsClient(string joinCode)
     {
+        if (!IsDisconnected) throw new InvalidOperationException("already connected or connecting");
+        connectionState = ConnectionState.Connecting;
+        using var _1 = DisconnectIfStillConnecting();
+        
         var playerId = await SignIn();
         
         Debug.Log($"Signed in. Player ID: {playerId}");
@@ -77,6 +129,9 @@ public class ConnectionManager : MonoBehaviour
 
         // Start the client
         NetworkManager.Singleton.StartClient();
+        
+        
+        connectionState = ConnectionState.ConnectedClient;
     }
 
     
@@ -84,8 +139,6 @@ public class ConnectionManager : MonoBehaviour
     {
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
         var playerId = AuthenticationService.Instance.PlayerId;
-
-        Debug.Log($"Signed in. Player ID: {playerId}");
         return playerId;
     }
     
