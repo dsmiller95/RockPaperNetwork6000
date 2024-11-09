@@ -65,11 +65,11 @@ public class GameManager : NetworkBehaviour
 
         playerDirectory.Add(newData);
 
-        if (playerIds[0] == null)
+        if (string.IsNullOrEmpty(playerIds[0]))
         {
             playerIds[0] = id;
         }
-        else if (playerIds[1] == null)
+        else if (string.IsNullOrEmpty(playerIds[1]))
         {
             playerIds[1] = id;
         }
