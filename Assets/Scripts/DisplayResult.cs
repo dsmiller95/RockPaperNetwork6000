@@ -13,6 +13,6 @@ public class DisplayResult : MonoBehaviour
     private string GetActionResultDescription()
     {
         var gameManager = GameManager.GAME_MANAGER;
-        return null;
+        return gameManager.lastWinner.ToString();
     }
 }

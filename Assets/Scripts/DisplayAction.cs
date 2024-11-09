@@ -14,6 +14,18 @@ public class DisplayAction : MonoBehaviour
     private string GetPlayerActionDescription()
     {
         var gameManager = GameManager.GAME_MANAGER;
-        return null;
+        var action = gameManager.actions[playerIndex];
+        switch (action)
+        {
+            case GameManager.Action.Sword:
+                return "Sword";
+            case GameManager.Action.Shield:
+                return "Shield";
+            case GameManager.Action.Magic:
+                return "Magic";
+            default:
+            case GameManager.Action.None:
+                return "Waiting for action";
+        }
     }
 }

@@ -15,6 +15,8 @@ public class GameManager : NetworkBehaviour
 
     public string[] playerIds = new string[2];
 
+    public Winner lastWinner;
+
     public enum Action
     {
         None,
@@ -80,7 +82,27 @@ public class GameManager : NetworkBehaviour
     {
         Debug.Log("Received shielding from " + id);
         SetAction(id, Action.Shield);
+        TryResolveActions();
     }
+
+    [Rpc(SendTo.Server)]
+    public void MagicRpc(string id)
+    {
+        Debug.Log("Received magicking from " + id);
+        SetAction(id, Action.Magic);
+        TryResolveActions();
+    }
+
+    [Rpc(SendTo.Server)]
+    public void SwordRpc(string id)
+    {
+        Debug.Log("Received swording from " + id);
+        
+        SetAction(id, Action.Sword);
+        TryResolveActions();
+    }
+    
+    
 
     int? IndexOfPlayer(string id)
     {
@@ -95,20 +117,46 @@ public class GameManager : NetworkBehaviour
         if (i == null) return;
         actions[i.Value] = action;
     }
-
-    [Rpc(SendTo.Server)]
-    public void MagicRpc(string id)
+    
+    private void TryResolveActions()
     {
-        Debug.Log("Received magicking from " + id);
-        SetAction(id, Action.Magic);
+        if (actions[0] == Action.None || actions[1] == Action.None) return;
+        
+        var action0 = actions[0];
+        var action1 = actions[1];
+        
+        actions[0] = Action.None;
+        actions[1] = Action.None;
+        
+        Debug.Log("Resolving actions: " + action0 + " vs " + action1);
+        
+        var winner = GetWinner(action0, action1);
+        
+        Debug.Log("Winner: " + winner);
+        
+        
     }
 
-    [Rpc(SendTo.Server)]
-    public void SwordRpc(string id)
+    public enum Winner
     {
-        Debug.Log("Received swording from " + id);
-        
-        SetAction(id, Action.Sword);
+        Player0,
+        Player1,
+        Draw
+    }
+
+    private Winner GetWinner(Action p1, Action p2)
+    {
+        return (p1, p2) switch
+        {
+            (Action.Sword, Action.Magic) => Winner.Player0,
+            (Action.Shield, Action.Sword) => Winner.Player0,
+            (Action.Magic, Action.Shield) => Winner.Player0,
+            (Action.Magic, Action.Sword) => Winner.Player1,
+            (Action.Sword, Action.Shield) => Winner.Player1,
+            (Action.Shield, Action.Magic) => Winner.Player1,
+            
+            _ => Winner.Draw
+        };
     }
 }
 
