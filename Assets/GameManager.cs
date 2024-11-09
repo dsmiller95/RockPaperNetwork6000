@@ -13,6 +13,18 @@ public class GameManager : NetworkBehaviour
 
     public List<PlayerData> playerDirectory;
 
+    public string[] playerIds = new string[2];
+
+    public enum Action
+    {
+        None,
+        Sword,
+        Shield,
+        Magic
+    };
+
+    public Action[] actions = new Action[2];
+
     void Awake()
     {
         ThereCanBeOnlyOne();
@@ -52,6 +64,15 @@ public class GameManager : NetworkBehaviour
         PlayerData newData = new() { clientId = id };
 
         playerDirectory.Add(newData);
+
+        if (playerIds[0] == null)
+        {
+            playerIds[0] = id;
+        }
+        else if (playerIds[1] == null)
+        {
+            playerIds[1] = id;
+        }
     }
 
     [Rpc(SendTo.Server)]
