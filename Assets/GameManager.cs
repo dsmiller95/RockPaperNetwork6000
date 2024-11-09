@@ -23,20 +23,20 @@ public class GameManager : NetworkBehaviour
     }
 
     [Rpc(SendTo.Server)]
-    public void ShieldRpc(ushort networkBehaviourId)
+    public void ShieldRpc(ushort networkBehaviourId, ulong networkObjectId)
     {
-        Debug.Log("Received shielding from " + networkBehaviourId);
+        Debug.Log("Received shielding from " + networkBehaviourId + ", " + networkObjectId);
     }
 
     [Rpc(SendTo.Server)]
-    public void MagicRpc(ushort networkBehaviourId)
+    public void MagicRpc(ushort networkBehaviourId, ulong networkObjectId)
     {
-        Debug.Log("Received magicking from " + networkBehaviourId);
+        Debug.Log("Received magicking from " + networkBehaviourId + ", " + networkObjectId);
     }
 
     [Rpc(SendTo.Server)]
-    public void SwordRpc(ushort networkBehaviourId)
+    public void SwordRpc(ushort networkBehaviourId, ulong networkObjectId)
     {
-        Debug.Log("Received swording from " + networkBehaviourId);
+        Debug.Log("Received swording from " + networkBehaviourId + ", " + networkObjectId);
     }
 }
