@@ -91,7 +91,7 @@ public class ConnectionManager : MonoBehaviour
         int maxConnections = 4;
 
         // Important: Once the allocation is created, you have ten seconds to BIND, else the allocation times out.
-        var hostAllocation = await RelayService.Instance.CreateAllocationAsync(maxConnections, region);
+        var hostAllocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);//region);
         Debug.Log($"Host Allocation ID: {hostAllocation.AllocationId}, region: {hostAllocation.Region}");
         Debug.Log("Host - Getting a join code for my allocation. I would share that join code with the other players so they can join my session.");
         var joinCode = await GetJoinCode(hostAllocation);
