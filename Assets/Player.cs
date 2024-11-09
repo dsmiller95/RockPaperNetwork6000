@@ -1,3 +1,4 @@
+using System;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -15,7 +16,9 @@ public class Player : NetworkBehaviour
     {
         if (!IsOwner)
             return;
-        Debug.Log("Start from " + NetworkBehaviourId + "," + NetworkObjectId);
+        Debug.Log("Start from " + GameManager.GetClientIdShort());
+
+        GameManager.GAME_MANAGER.RegisterRpc(GameManager.GetClientId());
     }
 
     void Update()
@@ -27,18 +30,18 @@ public class Player : NetworkBehaviour
 
         if (Input.GetKeyDown(shield))
         {
-            Debug.Log(NetworkBehaviourId + "," + NetworkObjectId + " is sending shielding");
-            GameManager.GAME_MANAGER.ShieldRpc(NetworkBehaviourId, NetworkObjectId);
+            Debug.Log(GameManager.GetClientIdShort() + " is sending shielding");
+            GameManager.GAME_MANAGER.ShieldRpc(GameManager.GetClientId());
         }
         else if (Input.GetKeyDown(magic))
         {
-            Debug.Log(NetworkBehaviourId + "," + NetworkObjectId + " is sending magicking");
-            GameManager.GAME_MANAGER.MagicRpc(NetworkBehaviourId, NetworkObjectId);
+            Debug.Log(GameManager.GetClientIdShort() + " is sending magicking");
+            GameManager.GAME_MANAGER.MagicRpc(GameManager.GetClientId());
         }
         else if (Input.GetKeyDown(sword))
         {
-            Debug.Log(NetworkBehaviourId + "," + NetworkObjectId + " is sending swording");
-            GameManager.GAME_MANAGER.SwordRpc(NetworkBehaviourId, NetworkObjectId);
+            Debug.Log(GameManager.GetClientIdShort() + " is sending swording");
+            GameManager.GAME_MANAGER.SwordRpc(GameManager.GetClientId());
         }
     }
 }
