@@ -1,16 +1,24 @@
+using Unity.Netcode;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour
+public class GameManager : NetworkBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public static GameManager GAME_MANAGER;
+
+    void Awake()
     {
-        
+        ThereCanBeOnlyOne();
     }
 
-    // Update is called once per frame
-    void Update()
+    void ThereCanBeOnlyOne()
     {
-        
+        if (GAME_MANAGER == null)
+        {
+            GAME_MANAGER = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 }
