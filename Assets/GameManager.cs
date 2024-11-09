@@ -79,18 +79,36 @@ public class GameManager : NetworkBehaviour
     public void ShieldRpc(string id)
     {
         Debug.Log("Received shielding from " + id);
+        SetAction(id, Action.Shield);
+    }
+
+    int? IndexOfPlayer(string id)
+    {
+        var i = Array.IndexOf(playerIds, id);
+        if (i == -1) return null;
+        return i;
+    }
+    
+    void SetAction(string id, Action action)
+    {
+        var i = IndexOfPlayer(id);
+        if (i == null) return;
+        actions[i.Value] = action;
     }
 
     [Rpc(SendTo.Server)]
     public void MagicRpc(string id)
     {
         Debug.Log("Received magicking from " + id);
+        SetAction(id, Action.Magic);
     }
 
     [Rpc(SendTo.Server)]
     public void SwordRpc(string id)
     {
         Debug.Log("Received swording from " + id);
+        
+        SetAction(id, Action.Sword);
     }
 }
 
