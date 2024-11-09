@@ -1,0 +1,10 @@
+# ROCK PAPER NETWORK 6000
+
+ROCK = SHIELD
+PAPER = MAGIC
+SCISSORS = SWORD
+
+Player Variables:
+Health
+Mana
+Position
