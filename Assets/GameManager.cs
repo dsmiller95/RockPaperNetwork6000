@@ -114,8 +114,17 @@ public class GameManager : NetworkBehaviour
         return false;
     }
 
+    /// <summary>
+    /// always runs on the server
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="action"></param>
     private void SetAction(FixedString64Bytes id, CombatAction action)
     {
+        if(!AllowsChangeAction())
+        {
+            return;
+        }
         if(p1Id.Value == id)
         {
             p1Action.Value = action;
@@ -126,6 +135,13 @@ public class GameManager : NetworkBehaviour
         }
     }
 
+    private bool AllowsChangeAction()
+    {
+        return gamePhase.Value is
+            GamePhase.ChoosingActions or
+            GamePhase.CountingDown;
+    }
+    
     private void ForceResolveActions()
     {
         if (p1Action.Value == CombatAction.None || p2Action.Value == CombatAction.None)
