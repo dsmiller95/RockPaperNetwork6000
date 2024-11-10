@@ -2,9 +2,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+
 public class DisplayAction : MonoBehaviour
 {
-    public int playerIndex;
+    public bool isOpponent;
     public TMPro.TMP_Text displayText;
     
     private void Update()
@@ -15,12 +16,7 @@ public class DisplayAction : MonoBehaviour
     private string GetPlayerActionDescription()
     {
         var gameManager = GameManager.GAME_MANAGER;
-        var action = playerIndex switch
-        {
-            0 => gameManager.p1Action.Value,
-            1 => gameManager.p2Action.Value,
-            _ => throw new ArgumentOutOfRangeException()
-        };
+        var action = isOpponent ? gameManager.GetOpponentAction() : gameManager.GetMyAction();
         switch (action)
         {
             case CombatAction.Sword:
@@ -29,6 +25,8 @@ public class DisplayAction : MonoBehaviour
                 return "Shield";
             case CombatAction.Magic:
                 return "Magic";
+            case null:
+                return "?";
             default:
             case CombatAction.None:
                 return "Waiting for action";

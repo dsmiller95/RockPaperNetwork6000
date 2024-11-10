@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -10,7 +11,15 @@ public enum CombatAction
     Sword,
     Shield,
     Magic
-};
+}
+
+public enum GamePhase
+{
+    ChoosingActions,
+    CountingDown,
+    RevealActions,
+    RevealWinner,
+}
 
 public enum CombatWinner
 {
@@ -39,6 +48,11 @@ public class GameManager : NetworkBehaviour
     public static MyWinState DidIWin()
     {
         var gameManager = GAME_MANAGER;
+        if (gameManager.gamePhase.Value != GamePhase.RevealWinner)
+        {
+            return MyWinState.None;
+        }
+        
         if (gameManager.lastWinner.Value == CombatWinner.Draw)
         {
             return MyWinState.Draw;
@@ -65,6 +79,8 @@ public class GameManager : NetworkBehaviour
     public List<PlayerData> playerDirectory;
     
     
+    public NetworkVariable<GamePhase> gamePhase = new(GamePhase.ChoosingActions);
+    
     public NetworkVariable<FixedString64Bytes> p1Id = new();
     public NetworkVariable<FixedString64Bytes> p2Id = new();
     
@@ -75,7 +91,14 @@ public class GameManager : NetworkBehaviour
     public float lastActionChange = 0;
     [Tooltip("In Seconds")]
     public float timeSinceLastActionToResolve = 1f;
+    [Tooltip("In Seconds")]
+    public float countdownTime = 1f;
+    [Tooltip("In Seconds")]
+    public float handRevealTime = 1f;
+    [Tooltip("In Seconds")]
+    public float winRevealTime = 1f;
 
+    
     private bool TryAddToMatch(FixedString64Bytes id)
     {
         if (p1Id.Value.IsEmpty)
@@ -146,13 +169,73 @@ public class GameManager : NetworkBehaviour
         ThereCanBeOnlyOne();
 
         playerDirectory = new List<PlayerData>();
+
+        RunGame().Forget();
     }
 
-    private void Update()
+    private async UniTask RunGame()
     {
-        if (!this.IsServer) return;
+        while (true)
+        {
+            gamePhase.Value = GamePhase.ChoosingActions;
+            
+            await UniTask.WaitUntil(() => p1Action.Value != CombatAction.None && p2Action.Value != CombatAction.None);
+            
+            gamePhase.Value = GamePhase.CountingDown;
+            Debug.Log("counting down!");
+            
+            await UniTask.Delay(TimeSpan.FromSeconds(countdownTime));
+            
+            gamePhase.Value = GamePhase.RevealActions;
+            Debug.Log("revealing actions!");
+            
+            await UniTask.Delay(TimeSpan.FromSeconds(handRevealTime));
+            
+            gamePhase.Value = GamePhase.RevealWinner;
+            TryResolveActions();
+            Debug.Log("revealing winner!");
+            
+            await UniTask.Delay(TimeSpan.FromSeconds(winRevealTime));
+        }
+    }
+
+    public CombatAction? GetMyAction()
+    {
+        if (p1Id.Value == ClientIdString)
+        {
+            return p1Action.Value;
+        }
+        if (p2Id.Value == ClientIdString)
+        {
+            return p2Action.Value;
+        }
+
+        return null;
+    }
+    
+    public CombatAction? GetOpponentAction()
+    {
+        switch (gamePhase.Value)
+        {
+            case GamePhase.ChoosingActions:
+            case GamePhase.CountingDown:
+                return null;
+            case GamePhase.RevealActions:
+            case GamePhase.RevealWinner:
+            default:
+                break;
+        }
         
-        TryResolveActions();
+        if (p1Id.Value == ClientIdString)
+        {
+            return p2Action.Value;
+        }
+        if (p2Id.Value == ClientIdString)
+        {
+            return p1Action.Value;
+        }
+
+        return null;
     }
 
     void ThereCanBeOnlyOne()
