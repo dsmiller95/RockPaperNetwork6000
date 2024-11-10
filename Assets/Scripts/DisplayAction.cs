@@ -19,12 +19,12 @@ public class DisplayAction : MonoBehaviour
         var action = isOpponent ? gameManager.GetOpponentAction() : gameManager.GetMyAction();
         switch (action)
         {
-            case CombatAction.Sword:
-                return "Sword";
-            case CombatAction.Shield:
-                return "Shield";
-            case CombatAction.Magic:
-                return "Magic";
+            case CombatAction.Scissors:
+                return "Scissors";
+            case CombatAction.Rock:
+                return "Rock";
+            case CombatAction.Paper:
+                return "Paper";
             case null:
                 return "?";
             default:

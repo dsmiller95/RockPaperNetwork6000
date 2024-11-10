@@ -10,9 +10,9 @@ using UnityEngine;
 public enum CombatAction
 {
     None,
-    Sword,
-    Shield,
-    Magic
+    Scissors,
+    Rock,
+    Paper
 }
 
 public enum GamePhase
@@ -167,12 +167,12 @@ public class GameManager : NetworkBehaviour
     {
         return (p1, p2) switch
         {
-            (CombatAction.Sword, CombatAction.Magic) => CombatWinner.Player0,
-            (CombatAction.Shield, CombatAction.Sword) => CombatWinner.Player0,
-            (CombatAction.Magic, CombatAction.Shield) => CombatWinner.Player0,
-            (CombatAction.Magic, CombatAction.Sword) => CombatWinner.Player1,
-            (CombatAction.Sword, CombatAction.Shield) => CombatWinner.Player1,
-            (CombatAction.Shield, CombatAction.Magic) => CombatWinner.Player1,
+            (CombatAction.Scissors, CombatAction.Paper) => CombatWinner.Player0,
+            (CombatAction.Rock, CombatAction.Scissors) => CombatWinner.Player0,
+            (CombatAction.Paper, CombatAction.Rock) => CombatWinner.Player0,
+            (CombatAction.Paper, CombatAction.Scissors) => CombatWinner.Player1,
+            (CombatAction.Scissors, CombatAction.Rock) => CombatWinner.Player1,
+            (CombatAction.Rock, CombatAction.Paper) => CombatWinner.Player1,
             
             _ => CombatWinner.Draw
         };
@@ -293,21 +293,21 @@ public class GameManager : NetworkBehaviour
     public void ShieldRpc(FixedString64Bytes id)
     {
         Log.Info("Received shielding from " + id);
-        SetAction(id, CombatAction.Shield);
+        SetAction(id, CombatAction.Rock);
     }
 
     [Rpc(SendTo.Server)]
     public void MagicRpc(FixedString64Bytes id)
     {
         Log.Info("Received magicking from " + id);
-        SetAction(id, CombatAction.Magic);
+        SetAction(id, CombatAction.Paper);
     }
 
     [Rpc(SendTo.Server)]
     public void SwordRpc(FixedString64Bytes id)
     {
         Log.Info("Received swording from " + id);
-        SetAction(id, CombatAction.Sword);
+        SetAction(id, CombatAction.Scissors);
     }
 }
 
@@ -315,4 +315,9 @@ public class GameManager : NetworkBehaviour
 public struct PlayerData
 {
     public FixedString64Bytes clientId;
+}
+
+
+public static class GamePhaseExtensions{
+
 }
