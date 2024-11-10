@@ -71,6 +71,10 @@ public class GameManager : NetworkBehaviour
     public NetworkVariable<CombatAction> p1Action = new();
     public NetworkVariable<CombatAction> p2Action = new();
     public NetworkVariable<CombatWinner> lastWinner = new();
+    
+    public float lastActionChange = 0;
+    [Tooltip("In Seconds")]
+    public float timeSinceLastActionToResolve = 1f;
 
     private bool TryAddToMatch(FixedString64Bytes id)
     {
@@ -93,16 +97,21 @@ public class GameManager : NetworkBehaviour
         if(p1Id.Value == id)
         {
             p1Action.Value = action;
+            lastActionChange = Time.time;
         }
         else if(p2Id.Value == id)
         {
             p2Action.Value = action;
+            lastActionChange = Time.time;
         }
     }
 
     private void TryResolveActions()
     {
         if(p1Action.Value == CombatAction.None || p2Action.Value == CombatAction.None) return;
+        var timeSinceLastAction = Time.time - lastActionChange;
+        if(timeSinceLastAction < timeSinceLastActionToResolve) return;
+        
         
         var action0 = p1Action.Value;
         var action1 = p2Action.Value;
@@ -139,6 +148,11 @@ public class GameManager : NetworkBehaviour
         playerDirectory = new List<PlayerData>();
     }
 
+    private void Update()
+    {
+        TryResolveActions();
+    }
+
     void ThereCanBeOnlyOne()
     {
         if (GAME_MANAGER == null)
@@ -168,7 +182,6 @@ public class GameManager : NetworkBehaviour
     {
         Debug.Log("Received shielding from " + id);
         SetAction(id, CombatAction.Shield);
-        TryResolveActions();
     }
 
     [Rpc(SendTo.Server)]
@@ -176,16 +189,13 @@ public class GameManager : NetworkBehaviour
     {
         Debug.Log("Received magicking from " + id);
         SetAction(id, CombatAction.Magic);
-        TryResolveActions();
     }
 
     [Rpc(SendTo.Server)]
     public void SwordRpc(FixedString64Bytes id)
     {
         Debug.Log("Received swording from " + id);
-        
         SetAction(id, CombatAction.Sword);
-        TryResolveActions();
     }
 }
 
