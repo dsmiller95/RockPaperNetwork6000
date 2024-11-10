@@ -1,32 +1,103 @@
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+
+public enum CombatAction
+{
+    None,
+    Sword,
+    Shield,
+    Magic
+};
+
+public enum CombatWinner
+{
+    Player0,
+    Player1,
+    Draw
+}
+
 
 //THIS IS THE LOCAL GAME MANAGER
 public class GameManager : NetworkBehaviour
 {
     public static GameManager GAME_MANAGER;
     static Guid CLIENT_ID = System.Guid.NewGuid();
-    static string clientIdString;
-    static string clientIdStringShort;
+    public static FixedString64Bytes ClientIdString => new(CLIENT_ID.ToString());
+    public static string ClientIdStringShort => CLIENT_ID.ToString().Substring(0, 4);
 
     public List<PlayerData> playerDirectory;
+    
+    
+    public NetworkVariable<FixedString64Bytes> p1Id = new();
+    public NetworkVariable<FixedString64Bytes> p2Id = new();
+    
+    public NetworkVariable<CombatAction> p1Action = new();
+    public NetworkVariable<CombatAction> p2Action = new();
+    public NetworkVariable<CombatWinner> lastWinner = new();
 
-    public string[] playerIds = new string[2];
-
-    public Winner lastWinner;
-
-    public enum Action
+    private bool TryAddToMatch(FixedString64Bytes id)
     {
-        None,
-        Sword,
-        Shield,
-        Magic
-    };
+        if (p1Id.Value.IsEmpty)
+        {
+            p1Id.Value = id;
+            return true;
+        }
+        if (p2Id.Value.IsEmpty)
+        {
+            p2Id.Value = id;
+            return true;
+        }
 
-    public Action[] actions = new Action[2];
+        return false;
+    }
 
+    private void SetAction(FixedString64Bytes id, CombatAction action)
+    {
+        if(p1Id.Value == id)
+        {
+            p1Action.Value = action;
+        }
+        else if(p2Id.Value == id)
+        {
+            p2Action.Value = action;
+        }
+    }
+
+    private void TryResolveActions()
+    {
+        if(p1Action.Value == CombatAction.None || p2Action.Value == CombatAction.None) return;
+        
+        var action0 = p1Action.Value;
+        var action1 = p2Action.Value;
+        
+        p1Action.Value = CombatAction.None;
+        p2Action.Value = CombatAction.None;
+        
+        Debug.Log("Resolving actions: " + action0 + " vs " + action1);
+        
+        lastWinner.Value = GetWinner(action0, action1);
+        
+        Debug.Log("Winner: " + lastWinner);
+    }
+
+    private CombatWinner GetWinner(CombatAction p1, CombatAction p2)
+    {
+        return (p1, p2) switch
+        {
+            (CombatAction.Sword, CombatAction.Magic) => CombatWinner.Player0,
+            (CombatAction.Shield, CombatAction.Sword) => CombatWinner.Player0,
+            (CombatAction.Magic, CombatAction.Shield) => CombatWinner.Player0,
+            (CombatAction.Magic, CombatAction.Sword) => CombatWinner.Player1,
+            (CombatAction.Sword, CombatAction.Shield) => CombatWinner.Player1,
+            (CombatAction.Shield, CombatAction.Magic) => CombatWinner.Player1,
+            
+            _ => CombatWinner.Draw
+        };
+    }
+    
     void Awake()
     {
         ThereCanBeOnlyOne();
@@ -46,20 +117,8 @@ public class GameManager : NetworkBehaviour
         }
     }
 
-    public static string GetClientIdShort()
-    {
-        clientIdStringShort ??= CLIENT_ID.ToString().Substring(0, 4);
-        return clientIdString;
-    }
-
-    public static string GetClientId()
-    {
-        clientIdString ??= CLIENT_ID.ToString();
-        return clientIdString;
-    }
-
     [Rpc(SendTo.Server)]
-    public void RegisterRpc(string id)
+    public void RegisterRpc(FixedString64Bytes id)
     {
         Debug.Log("REGISTERING " + id);
 
@@ -67,99 +126,39 @@ public class GameManager : NetworkBehaviour
 
         playerDirectory.Add(newData);
 
-        if (string.IsNullOrEmpty(playerIds[0]))
-        {
-            playerIds[0] = id;
-        }
-        else if (string.IsNullOrEmpty(playerIds[1]))
-        {
-            playerIds[1] = id;
-        }
+        TryAddToMatch(id);
     }
 
     [Rpc(SendTo.Server)]
-    public void ShieldRpc(string id)
+    public void ShieldRpc(FixedString64Bytes id)
     {
         Debug.Log("Received shielding from " + id);
-        SetAction(id, Action.Shield);
+        SetAction(id, CombatAction.Shield);
         TryResolveActions();
     }
 
     [Rpc(SendTo.Server)]
-    public void MagicRpc(string id)
+    public void MagicRpc(FixedString64Bytes id)
     {
         Debug.Log("Received magicking from " + id);
-        SetAction(id, Action.Magic);
+        SetAction(id, CombatAction.Magic);
         TryResolveActions();
     }
 
     [Rpc(SendTo.Server)]
-    public void SwordRpc(string id)
+    public void SwordRpc(FixedString64Bytes id)
     {
         Debug.Log("Received swording from " + id);
         
-        SetAction(id, Action.Sword);
+        SetAction(id, CombatAction.Sword);
         TryResolveActions();
     }
     
     
-
-    int? IndexOfPlayer(string id)
-    {
-        var i = Array.IndexOf(playerIds, id);
-        if (i == -1) return null;
-        return i;
-    }
-    
-    void SetAction(string id, Action action)
-    {
-        var i = IndexOfPlayer(id);
-        if (i == null) return;
-        actions[i.Value] = action;
-    }
-    
-    private void TryResolveActions()
-    {
-        if (actions[0] == Action.None || actions[1] == Action.None) return;
-        
-        var action0 = actions[0];
-        var action1 = actions[1];
-        
-        actions[0] = Action.None;
-        actions[1] = Action.None;
-        
-        Debug.Log("Resolving actions: " + action0 + " vs " + action1);
-        
-        lastWinner = GetWinner(action0, action1);
-        
-        Debug.Log("Winner: " + lastWinner);
-    }
-
-    public enum Winner
-    {
-        Player0,
-        Player1,
-        Draw
-    }
-
-    private Winner GetWinner(Action p1, Action p2)
-    {
-        return (p1, p2) switch
-        {
-            (Action.Sword, Action.Magic) => Winner.Player0,
-            (Action.Shield, Action.Sword) => Winner.Player0,
-            (Action.Magic, Action.Shield) => Winner.Player0,
-            (Action.Magic, Action.Sword) => Winner.Player1,
-            (Action.Sword, Action.Shield) => Winner.Player1,
-            (Action.Shield, Action.Magic) => Winner.Player1,
-            
-            _ => Winner.Draw
-        };
-    }
 }
 
 [System.Serializable]
 public struct PlayerData
 {
-    public string clientId;
+    public FixedString64Bytes clientId;
 }

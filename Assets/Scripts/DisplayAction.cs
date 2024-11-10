@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class DisplayAction : MonoBehaviour
@@ -14,17 +15,22 @@ public class DisplayAction : MonoBehaviour
     private string GetPlayerActionDescription()
     {
         var gameManager = GameManager.GAME_MANAGER;
-        var action = gameManager.actions[playerIndex];
+        var action = playerIndex switch
+        {
+            0 => gameManager.p1Action.Value,
+            1 => gameManager.p1Action.Value,
+            _ => throw new ArgumentOutOfRangeException()
+        };
         switch (action)
         {
-            case GameManager.Action.Sword:
+            case CombatAction.Sword:
                 return "Sword";
-            case GameManager.Action.Shield:
+            case CombatAction.Shield:
                 return "Shield";
-            case GameManager.Action.Magic:
+            case CombatAction.Magic:
                 return "Magic";
             default:
-            case GameManager.Action.None:
+            case CombatAction.None:
                 return "Waiting for action";
         }
     }
