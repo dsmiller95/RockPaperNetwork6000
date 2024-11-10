@@ -18,7 +18,7 @@ public class DisplayAction : MonoBehaviour
         var action = playerIndex switch
         {
             0 => gameManager.p1Action.Value,
-            1 => gameManager.p1Action.Value,
+            1 => gameManager.p2Action.Value,
             _ => throw new ArgumentOutOfRangeException()
         };
         switch (action)
