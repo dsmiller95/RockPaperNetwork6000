@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Dman.Utilities;
 using Dman.Utilities.Logger;
 using Unity.Collections;
 using Unity.Netcode;
@@ -166,14 +167,20 @@ public class GameManager : NetworkBehaviour
         ThereCanBeOnlyOne();
 
         playerDirectory = new List<PlayerData>();
+        
+        SingletonLocator<IConnectionManager>.Instance.OnConnectionBegin += InstanceOnOnConnectionBegin;
     }
 
-    private void Start()
+    private void InstanceOnOnConnectionBegin(ConnectionType conType)
     {
-        if (this.IsServer)
+        if (conType == ConnectionType.Client) return;
+
+        if (!this.IsServer)
         {
-            RunGameServerTiming().Forget();
+            Log.Error("Expected to be server when not client, but was not server");
+            return;
         }
+        RunGameServerTiming().Forget();
     }
 
     private async UniTask RunGameServerTiming()

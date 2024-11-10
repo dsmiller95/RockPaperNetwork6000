@@ -11,7 +11,19 @@ using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
 
-public class ConnectionManager : MonoBehaviour
+public enum ConnectionType
+{
+    Host,
+    Client
+}
+
+public interface IConnectionManager
+{
+    public event Action<ConnectionType> OnConnectionBegin;
+}
+
+[UnitySingleton]
+public class ConnectionManager : MonoBehaviour, IConnectionManager
 {
     string autoSelectRegionName = "auto-select (QoS)";
     
@@ -28,6 +40,8 @@ public class ConnectionManager : MonoBehaviour
     public bool IsConnecting => connectionState == ConnectionState.Connecting;
     public bool IsConnected => connectionState == ConnectionState.ConnectedHost || connectionState == ConnectionState.ConnectedClient;
     public bool IsDisconnected => connectionState == ConnectionState.Disconnected;
+    
+    public event Action<ConnectionType> OnConnectionBegin;
     
     public bool IsHost
     {
@@ -105,8 +119,9 @@ public class ConnectionManager : MonoBehaviour
 
         Debug.Log($"Host - Started host successfully, setting to connected host. join code is {joinCode}");
         connectionState = ConnectionState.ConnectedHost;
-        
         hostConnectJoinCode = joinCode;
+        OnConnectionBegin?.Invoke(ConnectionType.Host);
+        
         return joinCode;
     }
 
@@ -132,6 +147,7 @@ public class ConnectionManager : MonoBehaviour
         
         
         connectionState = ConnectionState.ConnectedClient;
+        OnConnectionBegin?.Invoke(ConnectionType.Client);
     }
 
     
@@ -176,5 +192,5 @@ public class ConnectionManager : MonoBehaviour
         Debug.Log("Player Allocation ID: " + playerAllocation.AllocationId);
         return playerAllocation;
     }
-    
+
 }
