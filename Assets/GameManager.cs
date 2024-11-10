@@ -150,6 +150,8 @@ public class GameManager : NetworkBehaviour
 
     private void Update()
     {
+        if (!this.IsServer) return;
+        
         TryResolveActions();
     }
 
