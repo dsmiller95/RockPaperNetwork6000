@@ -170,10 +170,13 @@ public class GameManager : NetworkBehaviour
 
         playerDirectory = new List<PlayerData>();
 
-        RunGame().Forget();
+        if (this.IsServer)
+        {
+            RunGameServerTiming().Forget();
+        }
     }
 
-    private async UniTask RunGame()
+    private async UniTask RunGameServerTiming()
     {
         while (true)
         {
