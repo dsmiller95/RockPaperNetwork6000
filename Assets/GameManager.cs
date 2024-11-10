@@ -88,9 +88,6 @@ public class GameManager : NetworkBehaviour
     public NetworkVariable<CombatAction> p2Action = new();
     public NetworkVariable<CombatWinner> lastWinner = new();
     
-    public float lastActionChange = 0;
-    [Tooltip("In Seconds")]
-    public float timeSinceLastActionToResolve = 1f;
     [Tooltip("In Seconds")]
     public float countdownTime = 1f;
     [Tooltip("In Seconds")]
@@ -120,21 +117,20 @@ public class GameManager : NetworkBehaviour
         if(p1Id.Value == id)
         {
             p1Action.Value = action;
-            lastActionChange = Time.time;
         }
         else if(p2Id.Value == id)
         {
             p2Action.Value = action;
-            lastActionChange = Time.time;
         }
     }
 
-    private void TryResolveActions()
+    private void ForceResolveActions()
     {
-        if(p1Action.Value == CombatAction.None || p2Action.Value == CombatAction.None) return;
-        var timeSinceLastAction = Time.time - lastActionChange;
-        if(timeSinceLastAction < timeSinceLastActionToResolve) return;
-        
+        if (p1Action.Value == CombatAction.None || p2Action.Value == CombatAction.None)
+        {
+            Debug.LogError("ForceResolveActions called with missing actions!");
+            return;
+        }
         
         var action0 = p1Action.Value;
         var action1 = p2Action.Value;
@@ -181,6 +177,7 @@ public class GameManager : NetworkBehaviour
         while (true)
         {
             gamePhase.Value = GamePhase.ChoosingActions;
+            Debug.Log("choosing actions!");
             
             await UniTask.WaitUntil(() => p1Action.Value != CombatAction.None && p2Action.Value != CombatAction.None);
             
@@ -195,7 +192,7 @@ public class GameManager : NetworkBehaviour
             await UniTask.Delay(TimeSpan.FromSeconds(handRevealTime));
             
             gamePhase.Value = GamePhase.RevealWinner;
-            TryResolveActions();
+            ForceResolveActions();
             Debug.Log("revealing winner!");
             
             await UniTask.Delay(TimeSpan.FromSeconds(winRevealTime));
