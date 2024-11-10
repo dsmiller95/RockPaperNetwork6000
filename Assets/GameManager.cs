@@ -121,7 +121,7 @@ public class GameManager : NetworkBehaviour
     /// <param name="action"></param>
     private void SetAction(FixedString64Bytes id, CombatAction action)
     {
-        if(!AllowsChangeAction())
+        if(!gamePhase.Value.AllowsChangeAction())
         {
             return;
         }
@@ -135,12 +135,6 @@ public class GameManager : NetworkBehaviour
         }
     }
 
-    private bool AllowsChangeAction()
-    {
-        return gamePhase.Value is
-            GamePhase.ChoosingActions or
-            GamePhase.CountingDown;
-    }
     
     private void ForceResolveActions()
     {
@@ -185,6 +179,15 @@ public class GameManager : NetworkBehaviour
         playerDirectory = new List<PlayerData>();
         
         SingletonLocator<IConnectionManager>.Instance.OnConnectionBegin += InstanceOnOnConnectionBegin;
+        
+        this.gamePhase.OnValueChanged += OnGamePhaseChanged;
+    }
+
+
+    private GameUIManager GameUIManager => SingletonLocator<GameUIManager>.Instance; 
+    private void OnGamePhaseChanged(GamePhase prevValue, GamePhase newValue)
+    {
+        GameUIManager.OnGamePhaseChanged(newValue);
     }
 
     private void InstanceOnOnConnectionBegin(ConnectionType conType)
@@ -211,7 +214,14 @@ public class GameManager : NetworkBehaviour
             gamePhase.Value = GamePhase.CountingDown;
             Log.Info("counting down!");
             
-            await UniTask.Delay(TimeSpan.FromSeconds(countdownTime));
+            var countdownBeginTime = Time.time;
+            float timeSinceCountdownStart = 0;
+            while((timeSinceCountdownStart = Time.time - countdownBeginTime) < countdownTime)
+            {
+                var secondsRemaining = countdownTime - timeSinceCountdownStart;
+                GameUIManager.SetCountdown(secondsRemaining);
+                await UniTask.Yield();
+            }
             
             gamePhase.Value = GamePhase.RevealActions;
             Log.Info("revealing actions!");
@@ -320,4 +330,11 @@ public struct PlayerData
 
 public static class GamePhaseExtensions{
 
+    public static bool AllowsChangeAction(this GamePhase phase)
+    {
+        return phase is
+            GamePhase.ChoosingActions or
+            GamePhase.CountingDown;
+    }
+    
 }
