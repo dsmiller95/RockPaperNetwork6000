@@ -188,6 +188,10 @@ public class GameManager : NetworkBehaviour
     private void OnGamePhaseChanged(GamePhase prevValue, GamePhase newValue)
     {
         GameUIManager.OnGamePhaseChanged(newValue);
+        if(newValue == GamePhase.CountingDown)
+        {
+            GameUIManager.BeginCountdown(this.countdownTime);
+        }
     }
 
     private void InstanceOnOnConnectionBegin(ConnectionType conType)
@@ -214,14 +218,15 @@ public class GameManager : NetworkBehaviour
             gamePhase.Value = GamePhase.CountingDown;
             Log.Info("counting down!");
             
-            var countdownBeginTime = Time.time;
-            float timeSinceCountdownStart = 0;
-            while((timeSinceCountdownStart = Time.time - countdownBeginTime) < countdownTime)
-            {
-                var secondsRemaining = countdownTime - timeSinceCountdownStart;
-                GameUIManager.SetCountdown(secondsRemaining);
-                await UniTask.Yield();
-            }
+            await UniTask.Delay(TimeSpan.FromSeconds(countdownTime));
+            // var countdownBeginTime = Time.time;
+            // float timeSinceCountdownStart = 0;
+            // while((timeSinceCountdownStart = Time.time - countdownBeginTime) < countdownTime)
+            // {
+            //     var secondsRemaining = countdownTime - timeSinceCountdownStart;
+            //     GameUIManager.SetCountdown(secondsRemaining);
+            //     await UniTask.Yield();
+            // }
             
             gamePhase.Value = GamePhase.RevealActions;
             Log.Info("revealing actions!");
