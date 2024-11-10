@@ -54,8 +54,8 @@ public class GameManager : NetworkBehaviour
         }
         else if(gameManager.lastWinner.Value == CombatWinner.Player1)
         {
-            if(iAmP0) return MyWinState.MyWin;
-            if(iAmP1) return MyWinState.MyLoss;
+            if(iAmP0) return MyWinState.MyLoss;
+            if(iAmP1) return MyWinState.MyWin;
         }
 
         return MyWinState.None;
