@@ -6,7 +6,7 @@ public class DisplayAction : MonoBehaviour
 {
     public int playerIndex;
     public TMPro.TMP_Text displayText;
-        
+    
     private void Update()
     {
         displayText.text = GetPlayerActionDescription() ?? string.Empty;

@@ -19,6 +19,14 @@ public enum CombatWinner
     Draw
 }
 
+public enum MyWinState
+{
+    None,
+    MyWin,
+    MyLoss,
+    Draw
+}
+
 
 //THIS IS THE LOCAL GAME MANAGER
 public class GameManager : NetworkBehaviour
@@ -27,6 +35,32 @@ public class GameManager : NetworkBehaviour
     static Guid CLIENT_ID = System.Guid.NewGuid();
     public static FixedString64Bytes ClientIdString => new(CLIENT_ID.ToString());
     public static string ClientIdStringShort => CLIENT_ID.ToString().Substring(0, 4);
+
+    public static MyWinState DidIWin()
+    {
+        var gameManager = GAME_MANAGER;
+        if (gameManager.lastWinner.Value == CombatWinner.Draw)
+        {
+            return MyWinState.Draw;
+        }
+        
+        var iAmP0 = gameManager.p1Id.Value == ClientIdString;
+        var iAmP1 = gameManager.p2Id.Value == ClientIdString;
+        
+        if(gameManager.lastWinner.Value == CombatWinner.Player0)
+        {
+            if(iAmP0) return MyWinState.MyWin;
+            if(iAmP1) return MyWinState.MyLoss;
+        }
+        else if(gameManager.lastWinner.Value == CombatWinner.Player1)
+        {
+            if(iAmP0) return MyWinState.MyWin;
+            if(iAmP1) return MyWinState.MyLoss;
+        }
+
+        return MyWinState.None;
+    }
+    
 
     public List<PlayerData> playerDirectory;
     
@@ -153,8 +187,6 @@ public class GameManager : NetworkBehaviour
         SetAction(id, CombatAction.Sword);
         TryResolveActions();
     }
-    
-    
 }
 
 [System.Serializable]

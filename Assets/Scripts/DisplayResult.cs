@@ -12,7 +12,20 @@ public class DisplayResult : MonoBehaviour
 
     private string GetActionResultDescription()
     {
-        var gameManager = GameManager.GAME_MANAGER;
-        return gameManager.lastWinner.Value.ToString();
+        var myWinState = GameManager.DidIWin();
+        
+        switch (myWinState)
+        {
+            case MyWinState.MyWin:
+                return "You Win!";
+            case MyWinState.MyLoss:
+                return "You Lose!";
+            case MyWinState.Draw:
+                return "Draw!";
+            case MyWinState.None:
+                return "Waiting for result";
+            default:
+                return "Waiting for result";
+        }
     }
 }
