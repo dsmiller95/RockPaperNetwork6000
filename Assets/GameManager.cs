@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Dman.Utilities.Logger;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -138,11 +139,11 @@ public class GameManager : NetworkBehaviour
         p1Action.Value = CombatAction.None;
         p2Action.Value = CombatAction.None;
         
-        Debug.Log("Resolving actions: " + action0 + " vs " + action1);
+        Log.Info("Resolving actions: " + action0 + " vs " + action1);
         
         lastWinner.Value = GetWinner(action0, action1);
         
-        Debug.Log("Winner: " + lastWinner);
+        Log.Info("Winner: " + lastWinner);
     }
 
     private CombatWinner GetWinner(CombatAction p1, CombatAction p2)
@@ -165,7 +166,10 @@ public class GameManager : NetworkBehaviour
         ThereCanBeOnlyOne();
 
         playerDirectory = new List<PlayerData>();
+    }
 
+    private void Start()
+    {
         if (this.IsServer)
         {
             RunGameServerTiming().Forget();
@@ -177,23 +181,23 @@ public class GameManager : NetworkBehaviour
         while (true)
         {
             gamePhase.Value = GamePhase.ChoosingActions;
-            Debug.Log("choosing actions!");
+            Log.Info("choosing actions!");
             
             await UniTask.WaitUntil(() => p1Action.Value != CombatAction.None && p2Action.Value != CombatAction.None);
             
             gamePhase.Value = GamePhase.CountingDown;
-            Debug.Log("counting down!");
+            Log.Info("counting down!");
             
             await UniTask.Delay(TimeSpan.FromSeconds(countdownTime));
             
             gamePhase.Value = GamePhase.RevealActions;
-            Debug.Log("revealing actions!");
+            Log.Info("revealing actions!");
             
             await UniTask.Delay(TimeSpan.FromSeconds(handRevealTime));
             
             gamePhase.Value = GamePhase.RevealWinner;
             ForceResolveActions();
-            Debug.Log("revealing winner!");
+            Log.Info("revealing winner!");
             
             await UniTask.Delay(TimeSpan.FromSeconds(winRevealTime));
         }
@@ -253,7 +257,7 @@ public class GameManager : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void RegisterRpc(FixedString64Bytes id)
     {
-        Debug.Log("REGISTERING " + id);
+        Log.Info("REGISTERING " + id);
 
         PlayerData newData = new() { clientId = id };
 
@@ -265,21 +269,21 @@ public class GameManager : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void ShieldRpc(FixedString64Bytes id)
     {
-        Debug.Log("Received shielding from " + id);
+        Log.Info("Received shielding from " + id);
         SetAction(id, CombatAction.Shield);
     }
 
     [Rpc(SendTo.Server)]
     public void MagicRpc(FixedString64Bytes id)
     {
-        Debug.Log("Received magicking from " + id);
+        Log.Info("Received magicking from " + id);
         SetAction(id, CombatAction.Magic);
     }
 
     [Rpc(SendTo.Server)]
     public void SwordRpc(FixedString64Bytes id)
     {
-        Debug.Log("Received swording from " + id);
+        Log.Info("Received swording from " + id);
         SetAction(id, CombatAction.Sword);
     }
 }
