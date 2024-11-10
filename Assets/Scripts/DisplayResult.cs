@@ -23,9 +23,9 @@ public class DisplayResult : MonoBehaviour
             case MyWinState.Draw:
                 return "Draw!";
             case MyWinState.None:
-                return "Waiting for result";
+                return "...";
             default:
-                return "Waiting for result";
+                return "...";
         }
     }
 }

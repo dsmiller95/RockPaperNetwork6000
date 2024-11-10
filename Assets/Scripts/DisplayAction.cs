@@ -29,7 +29,7 @@ public class DisplayAction : MonoBehaviour
                 return "?";
             default:
             case CombatAction.None:
-                return "Waiting for action";
+                return "?";
         }
     }
 }
