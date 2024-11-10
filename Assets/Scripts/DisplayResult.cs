@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 public class DisplayResult : MonoBehaviour
 {
-    public Text displayText;
+    public TMPro.TMP_Text displayText;
         
     private void Update()
     {

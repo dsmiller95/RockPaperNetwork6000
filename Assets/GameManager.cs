@@ -130,11 +130,9 @@ public class GameManager : NetworkBehaviour
         
         Debug.Log("Resolving actions: " + action0 + " vs " + action1);
         
-        var winner = GetWinner(action0, action1);
+        lastWinner = GetWinner(action0, action1);
         
-        Debug.Log("Winner: " + winner);
-        
-        
+        Debug.Log("Winner: " + lastWinner);
     }
 
     public enum Winner

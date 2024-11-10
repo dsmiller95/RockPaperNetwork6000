@@ -4,7 +4,7 @@ using UnityEngine.UI;
 public class DisplayAction : MonoBehaviour
 {
     public int playerIndex;
-    public Text displayText;
+    public TMPro.TMP_Text displayText;
         
     private void Update()
     {

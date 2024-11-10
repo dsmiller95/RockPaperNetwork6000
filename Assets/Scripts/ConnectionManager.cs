@@ -154,8 +154,6 @@ public class ConnectionManager : MonoBehaviour
     /// </summary>
     private async Awaitable<string> GetJoinCode(Allocation hostAllocation)
     {
-        Debug.Log("Host - Getting a join code for my allocation. I would share that join code with the other players so they can join my session.");
-
         try
         {
             var joinCode = await RelayService.Instance.GetJoinCodeAsync(hostAllocation.AllocationId);
