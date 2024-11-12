@@ -7,7 +7,19 @@ public class DisplayAction : MonoBehaviour
 {
     public bool isOpponent;
     public TMPro.TMP_Text displayText;
-    
+
+    private void Start()
+    {
+        if(isOpponent) GameManager.GAME_MANAGER.onOpponentActionChanged.AddListener(OnActionChanged);
+        else GameManager.GAME_MANAGER.onMyActionChanged.AddListener(OnActionChanged);
+    }
+
+    private void OnActionChanged()
+    {
+        Debug.Log("Action changed! isOpponent: " + isOpponent);
+    }
+
+
     private void Update()
     {
         displayText.text = GetPlayerActionDescription() ?? string.Empty;

@@ -6,6 +6,7 @@ using Dman.Utilities.Logger;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Events;
 
 public enum CombatAction
 {
@@ -90,6 +91,9 @@ public class GameManager : NetworkBehaviour
     public NetworkVariable<CombatAction> p2Action = new();
     public NetworkVariable<CombatWinner> lastWinner = new();
     
+    public UnityEvent onMyActionChanged = new();
+    public UnityEvent onOpponentActionChanged = new();
+    
     [Tooltip("In Seconds")]
     public float countdownTime = 1f;
     [Tooltip("In Seconds")]
@@ -97,6 +101,7 @@ public class GameManager : NetworkBehaviour
     [Tooltip("In Seconds")]
     public float winRevealTime = 1f;
 
+    private GameUIManager GameUIManager => SingletonLocator<GameUIManager>.Instance; 
     
     private bool TryAddToMatch(FixedString64Bytes id)
     {
@@ -134,7 +139,6 @@ public class GameManager : NetworkBehaviour
             p2Action.Value = action;
         }
     }
-
     
     private void ForceResolveActions()
     {
@@ -181,10 +185,24 @@ public class GameManager : NetworkBehaviour
         SingletonLocator<IConnectionManager>.Instance.OnConnectionBegin += InstanceOnOnConnectionBegin;
         
         this.gamePhase.OnValueChanged += OnGamePhaseChanged;
+        
+        this.p1Action.OnValueChanged += OnP1ActionChanged;
+        this.p2Action.OnValueChanged += OnP2ActionChanged;
     }
 
 
-    private GameUIManager GameUIManager => SingletonLocator<GameUIManager>.Instance; 
+    private void OnP1ActionChanged(CombatAction previousvalue, CombatAction newvalue)
+    {
+        if(IsP1()) onMyActionChanged.Invoke();
+        if(IsP2()) onOpponentActionChanged.Invoke();
+    }
+    private void OnP2ActionChanged(CombatAction previousvalue, CombatAction newvalue)
+    {
+        if(IsP2()) onMyActionChanged.Invoke();
+        if(IsP1()) onOpponentActionChanged.Invoke();
+    }
+
+
     private void OnGamePhaseChanged(GamePhase prevValue, GamePhase newValue)
     {
         GameUIManager.OnGamePhaseChanged(newValue);
@@ -243,16 +261,19 @@ public class GameManager : NetworkBehaviour
 
     public CombatAction? GetMyAction()
     {
-        if (p1Id.Value == ClientIdString)
-        {
-            return p1Action.Value;
-        }
-        if (p2Id.Value == ClientIdString)
-        {
-            return p2Action.Value;
-        }
+        if (IsP1()) return p1Action.Value;
+        if (IsP2()) return p2Action.Value;
 
         return null;
+    }
+    
+    private bool IsP1()
+    {
+        return p1Id.Value == ClientIdString;
+    }
+    private bool IsP2()
+    {
+        return p2Id.Value == ClientIdString;
     }
     
     public CombatAction? GetOpponentAction()
