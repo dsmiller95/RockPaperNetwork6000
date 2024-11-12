@@ -1,4 +1,5 @@
 ﻿using System;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,6 +8,8 @@ public class DisplayAction : MonoBehaviour
 {
     public bool isOpponent;
     public TMPro.TMP_Text displayText;
+    public float shakeDuration = 0.5f;
+    public Vector3 shakeStrength = Vector3.one * 10;
 
     private void Start()
     {
@@ -17,6 +20,7 @@ public class DisplayAction : MonoBehaviour
     private void OnActionChanged()
     {
         Debug.Log("Action changed! isOpponent: " + isOpponent);
+        this.transform.DOShakePosition(shakeDuration, shakeStrength);
     }
 
 
