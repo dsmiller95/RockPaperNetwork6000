@@ -36,6 +36,9 @@ public class ConnectionManager : MonoBehaviour, IConnectionManager
     }
 
 
+    [field: SerializeField]
+    public string ConnectionError { get; private set; }
+    
     private ConnectionState connectionState = ConnectionState.Disconnected;
     public bool IsConnecting => connectionState == ConnectionState.Connecting;
     public bool IsConnected => connectionState == ConnectionState.ConnectedHost || connectionState == ConnectionState.ConnectedClient;
@@ -128,6 +131,13 @@ public class ConnectionManager : MonoBehaviour, IConnectionManager
     public async Awaitable OnConnectAsClient(string joinCode)
     {
         if (!IsDisconnected) throw new InvalidOperationException("already connected or connecting");
+
+        if (string.IsNullOrEmpty(joinCode))
+        {
+            this.ConnectionError = "Join code is empty";
+            return;
+        }
+        
         connectionState = ConnectionState.Connecting;
         using var _1 = DisconnectIfStillConnecting();
         
@@ -135,8 +145,27 @@ public class ConnectionManager : MonoBehaviour, IConnectionManager
         
         Debug.Log($"Signed in. Player ID: {playerId}");
 
-        var playerAllocation = await JoinWithCode(joinCode);
-        Debug.Log("Player - Joined allocation successfully.");
+        JoinAllocation playerAllocation = null; 
+        try
+        {
+            playerAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+        }
+        catch(RelayServiceException relayException)
+        {
+            if (relayException.Reason == RelayExceptionReason.InvalidRequest)
+            {
+                ConnectionError = "Invalid join code";
+            }
+            else
+            {
+                ConnectionError = "Failed to join room: " + relayException.Reason.ToString();
+            }
+            
+            Debug.LogError(relayException.Message, this);
+
+            return;
+        }
+        Debug.Log("Player - Joined Allocation ID: " + playerAllocation.AllocationId);
 
         // Configure Unity Transport with the Relay server data
         var relayServerData = new RelayServerData(playerAllocation, "wss");
@@ -153,9 +182,11 @@ public class ConnectionManager : MonoBehaviour, IConnectionManager
     
     private async Awaitable<string> SignIn()
     {
-        await AuthenticationService.Instance.SignInAnonymouslyAsync();
-        var playerId = AuthenticationService.Instance.PlayerId;
-        return playerId;
+        if (!AuthenticationService.Instance.IsSignedIn)
+        {
+            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+        }
+        return AuthenticationService.Instance.PlayerId;
     }
     
     
@@ -182,15 +213,4 @@ public class ConnectionManager : MonoBehaviour, IConnectionManager
             throw;
         }
     }
-
-    private async Awaitable<JoinAllocation> JoinWithCode(string joinCode)
-    {
-        
-        Debug.Log("Player - Joining host allocation using join code. Upon success, I have 10 seconds to BIND to the Relay server that I've allocated.");
-
-        var playerAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
-        Debug.Log("Player Allocation ID: " + playerAllocation.AllocationId);
-        return playerAllocation;
-    }
-
 }

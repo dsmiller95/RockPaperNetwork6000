@@ -29,6 +29,7 @@ public class HelloWorldManager : MonoBehaviour
         {
             // not connected or connecting
             StartButtons();
+            GUILayout.Label(m_ConnectionManager.ConnectionError);
         }
         
         
