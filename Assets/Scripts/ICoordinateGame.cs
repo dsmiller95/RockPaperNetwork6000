@@ -3,6 +3,12 @@
 public interface ICoordinateGame
 {
     public MyWinState GetMyWinState();
+    /// <summary>
+    /// invoked whenever a game resolves (a player wins, or a draw occurs).
+    /// Contains information about how the win pertains to the player on the current client.
+    /// Typically invoked after the result has been displayed to the player and the next game begins
+    /// </summary>
+    public UnityEvent<MyWinState> OnGameResolved { get; }
     
     public CombatAction? GetMyAction();
     public UnityEvent OnMyActionChanged { get; }

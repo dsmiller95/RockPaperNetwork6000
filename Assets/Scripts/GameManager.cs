@@ -37,6 +37,8 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     public NetworkVariable<CombatAction> p0Action = new();
     public NetworkVariable<CombatAction> p1Action = new();
     public NetworkVariable<CombatWinner> lastWinner = new();
+    public UnityEvent<MyWinState> onGameResolved = new();
+    public UnityEvent<MyWinState> OnGameResolved => onGameResolved;
     
     public UnityEvent onMyActionChanged = new();
     public UnityEvent OnMyActionChanged => onMyActionChanged;
@@ -54,31 +56,28 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
 
     public MyWinState GetMyWinState()
     {
-        
-        if (gamePhase.Value != GamePhase.RevealWinner)
+        return GetWinState(gamePhase.Value, lastWinner.Value, GetCurrentPlayer());
+    }
+
+    private static MyWinState GetWinState(
+        GamePhase currentPhase,
+        CombatWinner lastWinner,
+        CombatPlayer? currentPlayer)
+    {
+        if (currentPhase != GamePhase.RevealWinner)
         {
             return MyWinState.None;
         }
         
-        var iAmP0 = IsP0();
-        var iAmP1 = IsP1();
-        if(!iAmP0 && !iAmP1)
+        if(currentPlayer == null)
         { // I may not be participating in the game at all
             return MyWinState.None;
         }
         
-        switch (lastWinner.Value)
-        {
-            case CombatWinner.Player0:
-                return iAmP0 ? MyWinState.MyWin : MyWinState.MyLoss;
-            case CombatWinner.Player1:
-                return iAmP1 ? MyWinState.MyWin : MyWinState.MyLoss;
-            
-            case CombatWinner.Draw:
-                return MyWinState.Draw;
-            default:
-                return MyWinState.None;
-        }
+        var playerWinner = lastWinner.TryToPlayer();
+        if(playerWinner == null) return MyWinState.Draw;
+        
+        return playerWinner == currentPlayer ? MyWinState.MyWin : MyWinState.MyLoss;
     }
 
     
@@ -123,24 +122,19 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     {
         return p1Id.Value == ClientIdString;
     }
+
+    private CombatPlayer? GetCurrentPlayer()
+    {
+        if (IsP0()) return CombatPlayer.Player0;
+        if (IsP1()) return CombatPlayer.Player1;
+        return null;
+    }
     
     public void Register()
     {
         var currentPlayerId = ClientIdString;
         Log.Info("REGISTERING " + currentPlayerId);
         RegisterRpc(currentPlayerId);
-    }
-
-    [Rpc(SendTo.Server)]
-    private void RegisterRpc(FixedString64Bytes id)
-    {
-        Log.Info("REGISTERING " + id);
-
-        PlayerData newData = new() { clientId = id };
-
-        playerDirectory.Add(newData);
-
-        TryAddToMatch(id);
     }
 
     public void PlayAction(CombatAction action)
@@ -159,22 +153,7 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         SetAction(id, action);
     }
     
-    private bool TryAddToMatch(FixedString64Bytes id)
-    {
-        if (p0Id.Value.IsEmpty)
-        {
-            p0Id.Value = id;
-            return true;
-        }
-        if (p1Id.Value.IsEmpty)
-        {
-            p1Id.Value = id;
-            return true;
-        }
-
-        return false;
-    }
-
+    
     /// <summary>
     /// always runs on the server
     /// </summary>
@@ -195,41 +174,35 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             p1Action.Value = action;
         }
     }
+
     
-    private void ForceResolveActions()
+
+    [Rpc(SendTo.Server)]
+    private void RegisterRpc(FixedString64Bytes id)
     {
-        if (p0Action.Value == CombatAction.None || p1Action.Value == CombatAction.None)
-        {
-            Debug.LogError("ForceResolveActions called with missing actions!");
-            return;
-        }
-        
-        var action0 = p0Action.Value;
-        var action1 = p1Action.Value;
-        
-        p0Action.Value = CombatAction.None;
-        p1Action.Value = CombatAction.None;
-        
-        Log.Info("Resolving actions: " + action0 + " vs " + action1);
-        
-        lastWinner.Value = GetWinner(action0, action1);
-        
-        Log.Info("Winner: " + lastWinner);
+        Log.Info("REGISTERING " + id);
+
+        PlayerData newData = new() { clientId = id };
+
+        playerDirectory.Add(newData);
+
+        TryAddToMatch(id);
     }
 
-    private CombatWinner GetWinner(CombatAction p1, CombatAction p2)
+    private bool TryAddToMatch(FixedString64Bytes id)
     {
-        return (p1, p2) switch
+        if (p0Id.Value.IsEmpty)
         {
-            (CombatAction.Scissors, CombatAction.Paper) => CombatWinner.Player0,
-            (CombatAction.Rock, CombatAction.Scissors) => CombatWinner.Player0,
-            (CombatAction.Paper, CombatAction.Rock) => CombatWinner.Player0,
-            (CombatAction.Paper, CombatAction.Scissors) => CombatWinner.Player1,
-            (CombatAction.Scissors, CombatAction.Rock) => CombatWinner.Player1,
-            (CombatAction.Rock, CombatAction.Paper) => CombatWinner.Player1,
-            
-            _ => CombatWinner.Draw
-        };
+            p0Id.Value = id;
+            return true;
+        }
+        if (p1Id.Value.IsEmpty)
+        {
+            p1Id.Value = id;
+            return true;
+        }
+
+        return false;
     }
     
     void Awake()
@@ -318,14 +291,60 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             await UniTask.Delay(TimeSpan.FromSeconds(handRevealTime));
             
             gamePhase.Value = GamePhase.RevealWinner;
-            ForceResolveActions();
+            var winnerMaybe = ForceResolveActions();
+            if (winnerMaybe is {} winner)
+            {
+                Log.Info("Winner: " + winner);
+                lastWinner.Value = winner;
+            }else
+            {
+                Log.Error("No winner found!");
+            }
             Log.Info("revealing winner!");
             
             await UniTask.Delay(TimeSpan.FromSeconds(winRevealTime));
+
+            if (winnerMaybe.HasValue)
+            {
+                NotifyWinResolvedBroadcastRPC(gamePhase.Value, winnerMaybe.Value);
+            }
         }
     }
+    
+    /// <summary>
+    /// runs on the server
+    /// </summary>
+    private CombatWinner? ForceResolveActions()
+    {
+        if (p0Action.Value == CombatAction.None || p1Action.Value == CombatAction.None)
+        {
+            Debug.LogError("ForceResolveActions called with missing actions!");
+            return null;
+        }
+        
+        var action0 = p0Action.Value;
+        var action1 = p1Action.Value;
+        
+        p0Action.Value = CombatAction.None;
+        p1Action.Value = CombatAction.None;
+        
+        return GameEnumsExtensions.GetWinner(action0, action1);
+    }
+
+    /// <summary>
+    /// Notify of a win state. sends over the game phase and winner to all clients, even though we have network variables for this.
+    /// This is to account for potential out-of-order sync of these state values with the RPC delivery.
+    /// </summary>
+    /// <param name="phase"></param>
+    /// <param name="winner"></param>
+    [Rpc(SendTo.Everyone)]
+    private void NotifyWinResolvedBroadcastRPC(GamePhase phase, CombatWinner winner)
+    {
+        var winState = GetWinState(phase, winner, GetCurrentPlayer());
+        onGameResolved.Invoke(winState);
+    }
 }
-public static class GamePhaseExtensions{
+public static class GameEnumsExtensions{
 
     public static bool AllowsChangeAction(this GamePhase phase)
     {
@@ -334,4 +353,18 @@ public static class GamePhaseExtensions{
             GamePhase.CountingDown;
     }
     
+    public static CombatWinner GetWinner(CombatAction p0, CombatAction p1)
+    {
+        return (p0, p1) switch
+        {
+            (CombatAction.Scissors, CombatAction.Paper) => CombatWinner.Player0,
+            (CombatAction.Rock, CombatAction.Scissors) => CombatWinner.Player0,
+            (CombatAction.Paper, CombatAction.Rock) => CombatWinner.Player0,
+            (CombatAction.Paper, CombatAction.Scissors) => CombatWinner.Player1,
+            (CombatAction.Scissors, CombatAction.Rock) => CombatWinner.Player1,
+            (CombatAction.Rock, CombatAction.Paper) => CombatWinner.Player1,
+            
+            _ => CombatWinner.Draw
+        };
+    }
 }
