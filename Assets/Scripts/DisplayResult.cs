@@ -12,7 +12,7 @@ public class DisplayResult : MonoBehaviour
 
     private string GetActionResultDescription()
     {
-        var myWinState = GameManager.DidIWin();
+        var myWinState = GameManager.GAME_MANAGER.GetMyWinState();
         
         switch (myWinState)
         {

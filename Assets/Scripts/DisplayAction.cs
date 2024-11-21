@@ -13,8 +13,8 @@ public class DisplayAction : MonoBehaviour
 
     private void Start()
     {
-        if(isOpponent) GameManager.GAME_MANAGER.onOpponentActionChanged.AddListener(OnActionChanged);
-        else GameManager.GAME_MANAGER.onMyActionChanged.AddListener(OnActionChanged);
+        if(isOpponent) GameManager.GAME_MANAGER.OnOpponentActionChanged.AddListener(OnActionChanged);
+        else GameManager.GAME_MANAGER.OnMyActionChanged.AddListener(OnActionChanged);
     }
 
     private void OnActionChanged()
