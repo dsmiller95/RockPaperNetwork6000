@@ -56,6 +56,7 @@ public class PlayerStateBinding : MonoBehaviour
             Log.Error("No state found");
             return;
         }
+        Log.Info($"State changed to\n{newState}");
 
         var played = GetBySpec(CardPlacement.Played, 0);
         played.SetCardInSlot(newState.ChosenAction);

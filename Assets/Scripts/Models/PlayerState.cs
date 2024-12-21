@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Dman.Utilities.Logger;
 using Unity.Netcode;
 using Utils;
@@ -49,6 +50,20 @@ public class PlayerState : INetworkSerializable, IEquatable<PlayerState>
             _chosenAction = _chosenAction,
             _hand = _hand,
             _deck = deck
+        };
+    }
+    
+    public static PlayerState CreateNew(IEnumerable<CardId> deck, int handSize, System.Random rng)
+    {
+        var deckArr = deck.ToArray();
+        deckArr.ShuffleInPlace(rng);
+        var hand = deckArr.Take(handSize).ToArray();
+        var newDeck = deckArr.Skip(handSize).ToArray();
+        return new PlayerState()
+        {
+            _chosenAction = CardId.None,
+            _hand = hand,
+            _deck = newDeck,
         };
     }
 
@@ -124,5 +139,14 @@ public class PlayerState : INetworkSerializable, IEquatable<PlayerState>
     public static bool operator !=(PlayerState left, PlayerState right)
     {
         return !Equals(left, right);
+    }
+
+    public override string ToString()
+    {
+        var result = new StringBuilder();
+        result.Append($"Chosen action: {_chosenAction}, ");
+        result.Append($"Hand: {_hand.Length}, ");
+        result.Append($"Deck: {_deck.Length}");
+        return result.ToString();
     }
 }

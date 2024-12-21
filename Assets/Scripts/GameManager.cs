@@ -56,6 +56,8 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     [Tooltip("In Seconds")]
     public float winRevealTime = 1f;
 
+    public int initialHandSize = 2;
+
     private CardIdGenerator _cardIdGenerator;
     
     private GameUIManager GameUIManager => SingletonLocator<GameUIManager>.Instance; 
@@ -217,11 +219,13 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
 
     private void OnP0StateChanged(PlayerState previousvalue, PlayerState newvalue)
     {
+        Log.Info("P0 state changed");
         if(IsP0()) onMyStateChanged.Invoke();
         if(IsP1()) onOpponentStateChanged.Invoke();
     }
     private void OnP1StateChanged(PlayerState previousvalue, PlayerState newvalue)
     {
+        Log.Info("P1 state changed");
         if(IsP1()) onMyStateChanged.Invoke();
         if(IsP0()) onOpponentStateChanged.Invoke();
     }
@@ -249,12 +253,29 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
 
     private async UniTask RunGameServerTiming()
     {
-        var cards = GenerateCards().ToArray();
+        Log.Info("Waiting for registrations");
+        
+        await UniTask.WaitUntil(() => 
+            !p0Id.Value.IsEmpty && !p1Id.Value.IsEmpty);
+        await UniTask.Delay(TimeSpan.FromSeconds(0.5f));
+        
+        Log.Info("Registration done, initializing players!");
         allCardData.Clear();
-        foreach (CardData card in cards)
+        var rng = new System.Random(UnityEngine.Random.Range(1, int.MaxValue));
+        
+        var p0Cards = GenerateCards().ToArray();
+        foreach (CardData card in p0Cards)
         {
             allCardData.Add(card);
         }
+        p0State.Value =  PlayerState.CreateNew(p0Cards.Select(x => x.cardId), initialHandSize, rng);
+        
+        var p1Cards = GenerateCards().ToArray();
+        foreach (CardData card in p1Cards)
+        {
+            allCardData.Add(card);
+        }
+        p1State.Value =  PlayerState.CreateNew(p1Cards.Select(x => x.cardId), initialHandSize, rng);
         
         while (true)
         {

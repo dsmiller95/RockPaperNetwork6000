@@ -6,6 +6,7 @@ using UnityEngine.Serialization;
 public class CardBinding : MonoBehaviour, IBoundCard
 {
     public TMPro.TMP_Text displayText;
+    public GameObject hiddenFace;
     public CardId myId;
     public event Action OnClick;
     [SerializeField] private Transform moveToTarget;
@@ -19,9 +20,10 @@ public class CardBinding : MonoBehaviour, IBoundCard
         displayText.text = ofType.ToString();
     }
     
-    public void SetMoveTo(Transform target)
+    public void SetDisplay(Transform slot, bool hidden)
     {
-        moveToTarget = target;
+        moveToTarget = slot;
+        hiddenFace.SetActive(hidden);
     }
     
     public void OnClicked()

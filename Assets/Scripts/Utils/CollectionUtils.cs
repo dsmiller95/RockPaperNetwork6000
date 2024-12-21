@@ -34,5 +34,20 @@ namespace Utils
 
             return hash.ToHashCode();
         }
+
+        /// <summary>
+        /// Fisher-Yates shuffle
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="rng"></param>
+        /// <typeparam name="T"></typeparam>
+        public static void ShuffleInPlace<T>(this T[] array, Random rng)
+        {
+            for (int i = 0; i < array.Length; i++)
+            {
+                int swapIndex = rng.Next(i, array.Length);
+                (array[i], array[swapIndex]) = (array[swapIndex], array[i]);
+            }
+        }
     }
 }

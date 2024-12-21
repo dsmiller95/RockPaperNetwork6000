@@ -18,13 +18,17 @@ public class CardSlot : MonoBehaviour
     public void SetCardInSlot(CardId newCard)
     {
         if (cardInSlot == newCard) return;
+        cardInSlot = newCard;
         if (_boundCard != null)
         { 
             _boundCard.OnClick -= OnMyCardClicked;
         }
+        if(newCard == CardId.None) return;
+        
         var registry = SingletonLocator<ICardRegistry>.Instance;
         var boundCard = registry.GetCard(newCard);
         boundCard.OnClick += OnMyCardClicked;
+        boundCard.SetDisplay(transform, this.hidden);
     }
 
     private void OnMyCardClicked()
