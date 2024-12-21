@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using Cards;
 using Cysharp.Threading.Tasks;
 using Dman.Utilities;
 using Dman.Utilities.Logger;
@@ -306,10 +307,12 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             
             gamePhase.Value = GamePhase.RevealWinner;
             var winnerMaybe = ForceResolveActions();
-            if (winnerMaybe is {} winner)
+            if (winnerMaybe is var (winner, p0Card, p1Card))
             {
                 Log.Info("Winner: " + winner);
                 lastWinner.Value = winner;
+                DestroyCardRPC(p0Card);
+                DestroyCardRPC(p1Card);
             }else
             {
                 Log.Error("No winner found!");
@@ -320,7 +323,7 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
 
             if (winnerMaybe.HasValue)
             {
-                NotifyWinResolvedBroadcastRPC(gamePhase.Value, winnerMaybe.Value);
+                NotifyWinResolvedBroadcastRPC(gamePhase.Value, winnerMaybe.Value.Item1);
             }
         }
     }
@@ -349,7 +352,7 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     /// <summary>
     /// runs on the server
     /// </summary>
-    private CombatWinner? ForceResolveActions()
+    private (CombatWinner, CardId, CardId)? ForceResolveActions()
     {
         if (p0State.Value.ChosenAction == CardId.None ||
             p1State.Value.ChosenAction == CardId.None)
@@ -367,8 +370,11 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         
         var p0CardType = GetCardType(cardP0);
         var p1CardType = GetCardType(cardP1);
-        
-        return GameEnumsExtensions.GetWinner(p0CardType, p1CardType);
+
+        return (
+            GameEnumsExtensions.GetWinner(p0CardType, p1CardType),
+            cardP0,
+            cardP1);
     }
 
     /// <summary>
@@ -384,6 +390,12 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         onGameResolved.Invoke(winState);
     }
     
+
+    [Rpc(SendTo.Everyone)]
+    private void DestroyCardRPC(CardId card)
+    {
+        SingletonLocator<ICardRegistry>.Instance.DestroyCard(card);
+    }
 
     public PlayerCardType GetCardType(CardId forId)
     {
