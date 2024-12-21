@@ -22,7 +22,7 @@ public class Player : NetworkBehaviour
         var playedActionMaybe = GetPlayedAction();
         if (playedActionMaybe is {} playedAction)
         {
-            GameManager.GAME_MANAGER.PlayAction(playedAction);
+            //GameManager.GAME_MANAGER.PlayAction(playedAction);
         }
     }
     

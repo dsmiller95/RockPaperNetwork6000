@@ -1,8 +1,11 @@
-﻿using UnityEngine.Events;
+﻿using System.Collections.Generic;
+using JetBrains.Annotations;
+using UnityEngine.Events;
 
 public interface ICoordinateGame
 {
     public MyWinState GetMyWinState();
+    
     /// <summary>
     /// invoked whenever a game resolves (a player wins, or a draw occurs).
     /// Contains information about how the win pertains to the player on the current client.
@@ -10,11 +13,13 @@ public interface ICoordinateGame
     /// </summary>
     public UnityEvent<MyWinState> OnGameResolved { get; }
     
-    public CombatAction? GetMyAction();
-    public UnityEvent OnMyActionChanged { get; }
-    
-    public CombatAction? GetOpponentAction();
-    public UnityEvent OnOpponentActionChanged { get; }
+    public PlayerState? GetMyState();
+    public UnityEvent OnMyStateChanged { get; }
+
+    public PlayerState? GetOpponentState();
+    public UnityEvent OnOpponentStateChanged { get; }
+
+    public PlayerCardType GetCardType(CardId forId);
 
     /// <summary>
     /// register the current player on the server. must be called after player initialization to
@@ -22,9 +27,5 @@ public interface ICoordinateGame
     /// </summary>
     public void Register();
     
-    /// <summary>
-    /// Play the given action for the current player
-    /// </summary>
-    /// <param name="action"></param>
-    public void PlayAction(CombatAction action);
+    public void PlayCard(CardId cardId);
 }

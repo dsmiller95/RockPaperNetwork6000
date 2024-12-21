@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Dman.Utilities;
@@ -28,22 +29,25 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     {
         public FixedString64Bytes clientId;
     }
+
+    public NetworkList<CardData> allCardData = new();
     
     public NetworkVariable<GamePhase> gamePhase = new(GamePhase.ChoosingActions);
     
     public NetworkVariable<FixedString64Bytes> p0Id = new();
     public NetworkVariable<FixedString64Bytes> p1Id = new();
 
-    public NetworkVariable<CombatAction> p0Action = new();
-    public NetworkVariable<CombatAction> p1Action = new();
+    public UnityEvent OnMyStateChanged => onMyStateChanged;
+    public UnityEvent onMyStateChanged = new();
+    public NetworkVariable<PlayerState> p0State = new();
+    
+    public UnityEvent OnOpponentStateChanged => onOpponentStateChanged;
+    public UnityEvent onOpponentStateChanged = new();
+    public NetworkVariable<PlayerState> p1State = new();
+    
     public NetworkVariable<CombatWinner> lastWinner = new();
     public UnityEvent<MyWinState> onGameResolved = new();
     public UnityEvent<MyWinState> OnGameResolved => onGameResolved;
-    
-    public UnityEvent onMyActionChanged = new();
-    public UnityEvent OnMyActionChanged => onMyActionChanged;
-    public UnityEvent onOpponentActionChanged = new();
-    public UnityEvent OnOpponentActionChanged => onOpponentActionChanged;
     
     [Tooltip("In Seconds")]
     public float countdownTime = 1f;
@@ -52,6 +56,8 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     [Tooltip("In Seconds")]
     public float winRevealTime = 1f;
 
+    private CardIdGenerator _cardIdGenerator;
+    
     private GameUIManager GameUIManager => SingletonLocator<GameUIManager>.Instance; 
 
     public MyWinState GetMyWinState()
@@ -79,38 +85,19 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         
         return playerWinner == currentPlayer ? MyWinState.MyWin : MyWinState.MyLoss;
     }
-
     
-    public CombatAction? GetOpponentAction()
+    
+    public PlayerState? GetMyState()
     {
-        switch (gamePhase.Value)
-        {
-            case GamePhase.ChoosingActions:
-            case GamePhase.CountingDown:
-                return null;
-            case GamePhase.RevealActions:
-            case GamePhase.RevealWinner:
-            default:
-                break;
-        }
-        
-        if (p0Id.Value == ClientIdString)
-        {
-            return p1Action.Value;
-        }
-        if (p1Id.Value == ClientIdString)
-        {
-            return p0Action.Value;
-        }
-
+        if (IsP0()) return p0State.Value;
+        if (IsP1()) return p1State.Value;
         return null;
     }
     
-    public CombatAction? GetMyAction()
+    public PlayerState? GetOpponentState()
     {
-        if (IsP0()) return p0Action.Value;
-        if (IsP1()) return p1Action.Value;
-
+        if (IsP0()) return p1State.Value;
+        if (IsP1()) return p0State.Value;
         return null;
     }
     
@@ -137,45 +124,41 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         RegisterRpc(currentPlayerId);
     }
 
-    public void PlayAction(CombatAction action)
+    public void PlayCard(CardId cardId)
     {
         var currentPlayerId = ClientIdString;
         
-        Log.Info($"{currentPlayerId} is sending {action}");
+        Log.Info($"{currentPlayerId} is playing {cardId}");
         
-        PlayActionServerRpc(action, currentPlayerId);
+        PlayCardServerRpc(cardId, currentPlayerId);
     }
     
     [Rpc(SendTo.Server)]
-    private void PlayActionServerRpc(CombatAction action, FixedString64Bytes id)
+    private void PlayCardServerRpc(CardId cardId, FixedString64Bytes id)
     {
-        Log.Info($"Received {action} from {id}");
-        SetAction(id, action);
+        Log.Info($"Received {cardId} from {id}");
+        PlayCard(id, cardId);
     }
-    
-    
+
     /// <summary>
     /// always runs on the server
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="action"></param>
-    private void SetAction(FixedString64Bytes id, CombatAction action)
+    private void PlayCard(FixedString64Bytes playerId, CardId playedCard)
     {
         if(!gamePhase.Value.AllowsChangeAction())
         {
             return;
         }
-        if(p0Id.Value == id)
+        
+        if(p0Id.Value == playerId)
         {
-            p0Action.Value = action;
+            p0State.Value = p0State.Value.PlayCard(playedCard);
         }
-        else if(p1Id.Value == id)
+        else if(p1Id.Value == playerId)
         {
-            p1Action.Value = action;
+            p1State.Value = p1State.Value.PlayCard(playedCard);
         }
     }
-
-    
 
     [Rpc(SendTo.Server)]
     private void RegisterRpc(FixedString64Bytes id)
@@ -209,14 +192,15 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     {
         ThereCanBeOnlyOne();
 
+        _cardIdGenerator = CardIdGenerator.Create();
         playerDirectory = new List<PlayerData>();
         
         SingletonLocator<IConnectionManager>.Instance.OnConnectionBegin += InstanceOnOnConnectionBegin;
         
         gamePhase.OnValueChanged += OnGamePhaseChanged;
         
-        p0Action.OnValueChanged += OnP0ActionChanged;
-        p1Action.OnValueChanged += OnP1ActionChanged;
+        p0State.OnValueChanged += OnP0StateChanged;
+        p1State.OnValueChanged += OnP1StateChanged;
     }
     
     void ThereCanBeOnlyOne()
@@ -231,15 +215,15 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         }
     }
 
-    private void OnP0ActionChanged(CombatAction previousvalue, CombatAction newvalue)
+    private void OnP0StateChanged(PlayerState previousvalue, PlayerState newvalue)
     {
-        if(IsP0()) onMyActionChanged.Invoke();
-        if(IsP1()) onOpponentActionChanged.Invoke();
+        if(IsP0()) onMyStateChanged.Invoke();
+        if(IsP1()) onOpponentStateChanged.Invoke();
     }
-    private void OnP1ActionChanged(CombatAction previousvalue, CombatAction newvalue)
+    private void OnP1StateChanged(PlayerState previousvalue, PlayerState newvalue)
     {
-        if(IsP1()) onMyActionChanged.Invoke();
-        if(IsP0()) onOpponentActionChanged.Invoke();
+        if(IsP1()) onMyStateChanged.Invoke();
+        if(IsP0()) onOpponentStateChanged.Invoke();
     }
     
     private void OnGamePhaseChanged(GamePhase prevValue, GamePhase newValue)
@@ -265,12 +249,21 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
 
     private async UniTask RunGameServerTiming()
     {
+        var cards = GenerateCards().ToArray();
+        allCardData.Clear();
+        foreach (CardData card in cards)
+        {
+            allCardData.Add(card);
+        }
+        
         while (true)
         {
             gamePhase.Value = GamePhase.ChoosingActions;
             Log.Info("choosing actions!");
             
-            await UniTask.WaitUntil(() => p0Action.Value != CombatAction.None && p1Action.Value != CombatAction.None);
+            await UniTask.WaitUntil(() => 
+                p0State.Value.ChosenAction != CardId.None && 
+                p1State.Value.ChosenAction != CardId.None);
             
             gamePhase.Value = GamePhase.CountingDown;
             Log.Info("counting down!");
@@ -310,25 +303,51 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             }
         }
     }
+
+    private IEnumerable<CardData> GenerateCards()
+    {
+        return GenerateCardTypes()
+            .Select(x => new CardData
+            {
+                cardType = x,
+                cardId = _cardIdGenerator.Next()
+            });
+    }
+    
+    private IEnumerable<PlayerCardType> GenerateCardTypes()
+    {
+        int cardsOfEach = 4;
+        for (int i = 0; i < cardsOfEach; i++)
+        {
+            yield return PlayerCardType.Rock;
+            yield return PlayerCardType.Paper;
+            yield return PlayerCardType.Scissors;
+        }
+    }
     
     /// <summary>
     /// runs on the server
     /// </summary>
     private CombatWinner? ForceResolveActions()
     {
-        if (p0Action.Value == CombatAction.None || p1Action.Value == CombatAction.None)
+        if (p0State.Value.ChosenAction == CardId.None ||
+            p1State.Value.ChosenAction == CardId.None)
         {
             Debug.LogError("ForceResolveActions called with missing actions!");
             return null;
         }
+
+        var (newP0, cardP0) = p0State.Value.TakePlayedCard();
+        p0State.Value = newP0;
         
-        var action0 = p0Action.Value;
-        var action1 = p1Action.Value;
+        var (newP1, cardP1) = p1State.Value.TakePlayedCard();
+        p1State.Value = newP1;
         
-        p0Action.Value = CombatAction.None;
-        p1Action.Value = CombatAction.None;
         
-        return GameEnumsExtensions.GetWinner(action0, action1);
+        var p0CardType = GetCardType(cardP0);
+        var p1CardType = GetCardType(cardP1);
+        
+        return GameEnumsExtensions.GetWinner(p0CardType, p1CardType);
     }
 
     /// <summary>
@@ -343,28 +362,11 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         var winState = GetWinState(phase, winner, GetCurrentPlayer());
         onGameResolved.Invoke(winState);
     }
-}
-public static class GameEnumsExtensions{
-
-    public static bool AllowsChangeAction(this GamePhase phase)
-    {
-        return phase is
-            GamePhase.ChoosingActions or
-            GamePhase.CountingDown;
-    }
     
-    public static CombatWinner GetWinner(CombatAction p0, CombatAction p1)
+
+    public PlayerCardType GetCardType(CardId forId)
     {
-        return (p0, p1) switch
-        {
-            (CombatAction.Scissors, CombatAction.Paper) => CombatWinner.Player0,
-            (CombatAction.Rock, CombatAction.Scissors) => CombatWinner.Player0,
-            (CombatAction.Paper, CombatAction.Rock) => CombatWinner.Player0,
-            (CombatAction.Paper, CombatAction.Scissors) => CombatWinner.Player1,
-            (CombatAction.Scissors, CombatAction.Rock) => CombatWinner.Player1,
-            (CombatAction.Rock, CombatAction.Paper) => CombatWinner.Player1,
-            
-            _ => CombatWinner.Draw
-        };
+        return allCardData.AsEnumerable()
+            .SingleOrDefault(x => x.cardId == forId).cardType;
     }
 }

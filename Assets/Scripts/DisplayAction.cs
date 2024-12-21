@@ -13,8 +13,8 @@ public class DisplayAction : MonoBehaviour
 
     private void Start()
     {
-        if(isOpponent) GameManager.GAME_MANAGER.OnOpponentActionChanged.AddListener(OnActionChanged);
-        else GameManager.GAME_MANAGER.OnMyActionChanged.AddListener(OnActionChanged);
+        // if(isOpponent) GameManager.GAME_MANAGER.OnOpponentActionChanged.AddListener(OnActionChanged);
+        // else GameManager.GAME_MANAGER.OnMyActionChanged.AddListener(OnActionChanged);
     }
 
     private void OnActionChanged()
@@ -32,7 +32,7 @@ public class DisplayAction : MonoBehaviour
     private string GetPlayerActionDescription()
     {
         var gameManager = GameManager.GAME_MANAGER;
-        var action = isOpponent ? gameManager.GetOpponentAction() : gameManager.GetMyAction();
+        CombatAction? action = CombatAction.None;// isOpponent ? gameManager.GetOpponentAction() : gameManager.GetMyAction();
         switch (action)
         {
             case CombatAction.Scissors:
