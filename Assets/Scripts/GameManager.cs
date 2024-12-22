@@ -311,8 +311,8 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             {
                 Log.Info("Winner: " + winner);
                 lastWinner.Value = winner;
-                DestroyCardRPC(p0Card);
-                DestroyCardRPC(p1Card);
+                DestroyCardRPC(p0Card, winRevealTime);
+                DestroyCardRPC(p1Card, winRevealTime);
             }else
             {
                 Log.Error("No winner found!");
@@ -392,9 +392,9 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     
 
     [Rpc(SendTo.Everyone)]
-    private void DestroyCardRPC(CardId card)
+    private void DestroyCardRPC(CardId card, float secondsDelay)
     {
-        SingletonLocator<ICardRegistry>.Instance.DestroyCard(card);
+        SingletonLocator<ICardRegistry>.Instance.DestroyCard(card, secondsDelay);
     }
 
     public PlayerCardType GetCardType(CardId forId)

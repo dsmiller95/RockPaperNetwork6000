@@ -1,5 +1,6 @@
 ﻿using System;
 using Cards;
+using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -20,7 +21,7 @@ public class CardBinding : MonoBehaviour, IBoundCard
         displayText.text = ofType.ToString();
     }
     
-    public void SetDisplay(Transform slot, bool hidden)
+    public void SetDisplay([CanBeNull] Transform slot, bool hidden)
     {
         moveToTarget = slot;
         hiddenFace.SetActive(hidden);

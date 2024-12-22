@@ -1610,6 +1610,10 @@ PrefabInstance:
       propertyPath: isOpponent
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 8554116781317856585, guid: 3d334a3bbe5cea04888cc076d6e439e7, type: 3}
+      propertyPath: hidden
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8683350402438431744, guid: 3d334a3bbe5cea04888cc076d6e439e7, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0

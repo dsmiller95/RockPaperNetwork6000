@@ -8,7 +8,7 @@ namespace Cards
     public interface ICardRegistry
     {
         public IBoundCard GetCard(CardId withId);
-        public void DestroyCard(CardId withId);
+        public void DestroyCard(CardId withId, float secondsDelay);
     }
 
     public interface IBoundCard
@@ -40,11 +40,12 @@ namespace Cards
             return card;
         }
 
-        public void DestroyCard(CardId withId)
+        public void DestroyCard(CardId withId, float secondsDelay)
         {
             if (existingCards.Remove(withId, out var existingCard))
             {
-                Destroy(existingCard.gameObject);
+                existingCard.SetDisplay(null, false);
+                Destroy(existingCard.gameObject, secondsDelay);
             }
         }
     }
