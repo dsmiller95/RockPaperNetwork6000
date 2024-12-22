@@ -311,18 +311,57 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             {
                 Log.Info("Winner: " + winner);
                 lastWinner.Value = winner;
-            }else
+                await UniTask.Delay(TimeSpan.FromSeconds(winRevealTime));
+                Log.Info("revealing winner!");
+                NotifyWinResolvedBroadcastRPC(gamePhase.Value, winner);
+                DrawBasedOnWin(winner);
+            }
+            else
             {
                 Log.Error("No winner found!");
+                await UniTask.Delay(TimeSpan.FromSeconds(winRevealTime));
             }
-            Log.Info("revealing winner!");
-            
-            await UniTask.Delay(TimeSpan.FromSeconds(winRevealTime));
+        }
+    }
 
-            if (winnerMaybe.HasValue)
-            {
-                NotifyWinResolvedBroadcastRPC(gamePhase.Value, winnerMaybe.Value);
-            }
+    /// <summary>
+    /// runs on the server
+    /// </summary>
+    private CombatWinner? ForceResolveActions()
+    {
+        if (p0State.Value.ChosenAction == CardId.None ||
+            p1State.Value.ChosenAction == CardId.None)
+        {
+            Debug.LogError("ForceResolveActions called with missing actions!");
+            return null;
+        }
+
+        var p0CardType = GetCardType(p0State.Value.ChosenAction);
+        p0State.Value = p0State.Value.DiscardPlayedCard();
+        
+        var p1CardType = GetCardType(p1State.Value.ChosenAction);
+        p1State.Value = p1State.Value.DiscardPlayedCard();
+        
+
+        return GameEnumsExtensions.GetWinner(p0CardType, p1CardType);
+    }
+
+    private void DrawBasedOnWin(CombatWinner winner)
+    {
+        switch (winner)
+        {
+            case CombatWinner.Player0:
+                p1State.Value = p1State.Value.DrawCard();
+                break;
+            case CombatWinner.Player1:
+                p0State.Value = p0State.Value.DrawCard();
+                break;
+            case CombatWinner.Draw:
+                p0State.Value = p0State.Value.DrawCard();
+                p1State.Value = p1State.Value.DrawCard();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(winner), winner, null);
         }
     }
 
@@ -345,28 +384,6 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             yield return PlayerCardType.Paper;
             yield return PlayerCardType.Scissors;
         }
-    }
-    
-    /// <summary>
-    /// runs on the server
-    /// </summary>
-    private CombatWinner? ForceResolveActions()
-    {
-        if (p0State.Value.ChosenAction == CardId.None ||
-            p1State.Value.ChosenAction == CardId.None)
-        {
-            Debug.LogError("ForceResolveActions called with missing actions!");
-            return null;
-        }
-
-        var p0CardType = GetCardType(p0State.Value.ChosenAction);
-        p0State.Value = p0State.Value.DiscardPlayedCard();
-        
-        var p1CardType = GetCardType(p1State.Value.ChosenAction);
-        p1State.Value = p1State.Value.DiscardPlayedCard();
-        
-
-        return GameEnumsExtensions.GetWinner(p0CardType, p1CardType);
     }
 
     /// <summary>
