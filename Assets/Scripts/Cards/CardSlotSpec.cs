@@ -6,6 +6,7 @@ public enum CardPlacement
     Deck,
     Hand,
     Played,
+    Discard,
 }
 
 

@@ -307,12 +307,10 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             
             gamePhase.Value = GamePhase.RevealWinner;
             var winnerMaybe = ForceResolveActions();
-            if (winnerMaybe is var (winner, p0Card, p1Card))
+            if (winnerMaybe is {} winner)
             {
                 Log.Info("Winner: " + winner);
                 lastWinner.Value = winner;
-                DestroyCardRPC(p0Card, winRevealTime);
-                DestroyCardRPC(p1Card, winRevealTime);
             }else
             {
                 Log.Error("No winner found!");
@@ -323,7 +321,7 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
 
             if (winnerMaybe.HasValue)
             {
-                NotifyWinResolvedBroadcastRPC(gamePhase.Value, winnerMaybe.Value.Item1);
+                NotifyWinResolvedBroadcastRPC(gamePhase.Value, winnerMaybe.Value);
             }
         }
     }
@@ -352,7 +350,7 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     /// <summary>
     /// runs on the server
     /// </summary>
-    private (CombatWinner, CardId, CardId)? ForceResolveActions()
+    private CombatWinner? ForceResolveActions()
     {
         if (p0State.Value.ChosenAction == CardId.None ||
             p1State.Value.ChosenAction == CardId.None)
@@ -361,20 +359,14 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
             return null;
         }
 
-        var (newP0, cardP0) = p0State.Value.TakePlayedCard();
-        p0State.Value = newP0;
+        var p0CardType = GetCardType(p0State.Value.ChosenAction);
+        p0State.Value = p0State.Value.DiscardPlayedCard();
         
-        var (newP1, cardP1) = p1State.Value.TakePlayedCard();
-        p1State.Value = newP1;
+        var p1CardType = GetCardType(p1State.Value.ChosenAction);
+        p1State.Value = p1State.Value.DiscardPlayedCard();
         
-        
-        var p0CardType = GetCardType(cardP0);
-        var p1CardType = GetCardType(cardP1);
 
-        return (
-            GameEnumsExtensions.GetWinner(p0CardType, p1CardType),
-            cardP0,
-            cardP1);
+        return GameEnumsExtensions.GetWinner(p0CardType, p1CardType);
     }
 
     /// <summary>

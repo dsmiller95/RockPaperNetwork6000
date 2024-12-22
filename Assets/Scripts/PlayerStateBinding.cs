@@ -38,8 +38,8 @@ public class PlayerStateBinding : MonoBehaviour
                 GameManager.GAME_MANAGER.PlayCard(id);
                 break;
             case CardPlacement.Played:
-                break;
             case CardPlacement.Deck:
+            case CardPlacement.Discard:
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(placement), placement, null);
@@ -62,6 +62,7 @@ public class PlayerStateBinding : MonoBehaviour
         played.SetCardInSlot(newState.ChosenAction);
 
         var hand = GetAllIn(CardPlacement.Hand).ToList();
+        if(hand.Count < newState.Hand.Length) Log.Error($"Not enough hand slots. {hand.Count} < {newState.Hand.Length}");
         for (int i = 0; i < hand.Count; i++)
         {
             var inHand = newState.Hand.Length > i ? newState.Hand[i] : CardId.None;
@@ -69,10 +70,19 @@ public class PlayerStateBinding : MonoBehaviour
         }
         
         var deck = GetAllIn(CardPlacement.Deck).ToList();
+        if(deck.Count < newState.Deck.Length) Log.Error($"Not enough deck slots. {deck.Count} < {newState.Deck.Length}");
         for (int i = 0; i < deck.Count; i++)
         {
             var inDeck = newState.Deck.Length > i ? newState.Deck[i] : CardId.None;
             deck[i].SetCardInSlot(inDeck);
+        }
+        
+        var discard = GetAllIn(CardPlacement.Discard).ToList();
+        if(discard.Count < newState.Discard.Length) Log.Error($"Not enough discard slots. {discard.Count} < {newState.Discard.Length}");
+        for (int i = 0; i < discard.Count; i++)
+        {
+            var inDiscard = newState.Discard.Length > i ? newState.Discard[i] : CardId.None;
+            discard[i].SetCardInSlot(inDiscard);
         }
     }
 
