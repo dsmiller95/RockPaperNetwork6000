@@ -29,6 +29,7 @@ public class CardSlot : MonoBehaviour
         var boundCard = registry.GetCard(newCard);
         boundCard.OnClick += OnMyCardClicked;
         boundCard.SetDisplay(transform, this.hidden);
+        _boundCard = boundCard;
     }
 
     private void OnMyCardClicked()

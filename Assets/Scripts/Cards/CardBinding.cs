@@ -14,7 +14,6 @@ public class CardBinding : MonoBehaviour, IBoundCard
     [SerializeField] private float moveSpeed = 10f;
     [SerializeField] private float rotateSpeed = 90f;
     
-
     public void Initialize(CardId id, PlayerCardType ofType)
     {
         displayText.text = ofType.ToString();
