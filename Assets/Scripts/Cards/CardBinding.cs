@@ -8,21 +8,29 @@ public class CardBinding : MonoBehaviour, IBoundCard
 {
     public TMPro.TMP_Text displayText;
     public GameObject hiddenFace;
-    public CardId myId;
     public event Action OnClick;
     [SerializeField] private Transform moveToTarget;
+    [SerializeField] private Transform originalParent;
     [SerializeField] private float moveSpeed = 10f;
     [SerializeField] private float rotateSpeed = 90f;
     
 
     public void Initialize(CardId id, PlayerCardType ofType)
     {
-        myId = id;
         displayText.text = ofType.ToString();
+        originalParent = transform.parent;
     }
     
     public void SetDisplay([CanBeNull] Transform slot, bool hidden)
     {
+        if (slot != null)
+        {
+            this.transform.SetParent(slot, worldPositionStays: true);
+        }
+        else
+        {
+            this.transform.SetParent(originalParent, worldPositionStays: true);
+        }
         moveToTarget = slot;
         hiddenFace.SetActive(hidden);
     }
