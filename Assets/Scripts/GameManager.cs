@@ -57,7 +57,10 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
     [Tooltip("In Seconds")]
     public float winRevealTime = 1f;
 
-    public int initialHandSize = 2;
+    public int initialHandSize = 3;
+    public bool drawOnLose = true;
+    public bool drawOnWin = true;
+    public bool drawOnDraw = true;
 
     private CardIdGenerator _cardIdGenerator;
     
@@ -346,19 +349,24 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         return GameEnumsExtensions.GetWinner(p0CardType, p1CardType);
     }
 
+    /// <summary>
+    /// runs on the server
+    /// </summary>
     private void DrawBasedOnWin(CombatWinner winner)
     {
         switch (winner)
         {
             case CombatWinner.Player0:
-                p1State.Value = p1State.Value.DrawCard();
+                if(drawOnWin) p0State.Value = p0State.Value.DrawCard();
+                if(drawOnLose) p1State.Value = p1State.Value.DrawCard();
                 break;
             case CombatWinner.Player1:
-                p0State.Value = p0State.Value.DrawCard();
+                if(drawOnLose) p0State.Value = p0State.Value.DrawCard();
+                if(drawOnWin) p1State.Value = p1State.Value.DrawCard();
                 break;
             case CombatWinner.Draw:
-                p0State.Value = p0State.Value.DrawCard();
-                p1State.Value = p1State.Value.DrawCard();
+                if(drawOnDraw) p0State.Value = p0State.Value.DrawCard();
+                if(drawOnDraw) p1State.Value = p1State.Value.DrawCard();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(winner), winner, null);
