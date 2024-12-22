@@ -1,6 +1,7 @@
 using System;
 using Unity.Netcode;
 using UnityEngine;
+using WebMatchShareHelper;
 
 public class HelloWorldManager : MonoBehaviour
 {
@@ -38,6 +39,14 @@ public class HelloWorldManager : MonoBehaviour
 
     void StartButtons()
     {
+        var sharedCode = ShareHelper.GetShared();
+        if (sharedCode != null)
+        {
+            // a code was shared with this user, automatically join.
+            m_ConnectionManager.OnConnectAsClient(sharedCode).Forget();
+            return;
+        }
+        
         if (GUILayout.Button("Host"))
         {
             m_ConnectionManager.OnConnectAsHost().Forget();
@@ -59,13 +68,12 @@ public class HelloWorldManager : MonoBehaviour
         GUILayout.Label("Transport: " +
                         NetworkManager.Singleton.NetworkConfig.NetworkTransport.GetType().Name);
         GUILayout.Label("Mode: " + mode);
-        if (m_ConnectionManager.IsHost)
+        var joinCode = m_ConnectionManager.IsHost ? m_ConnectionManager.hostConnectJoinCode : this.m_clientJoinCode;  
+        GUILayout.Label("Join code: " + joinCode);
+        
+        if (GUILayout.Button("Copy join"))
         {
-            GUILayout.Label("Join code: " + m_ConnectionManager.hostConnectJoinCode);
-        }
-        else
-        {
-            GUILayout.Label("Join code: " + this.m_clientJoinCode);
+            ShareHelper.Share(joinCode);
         }
     }
 }

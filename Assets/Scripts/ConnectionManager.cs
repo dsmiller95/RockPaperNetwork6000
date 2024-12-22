@@ -40,8 +40,10 @@ public class ConnectionManager : MonoBehaviour, IConnectionManager
     public string ConnectionError { get; private set; }
     
     private ConnectionState connectionState = ConnectionState.Disconnected;
-    public bool IsConnecting => connectionState == ConnectionState.Connecting;
-    public bool IsConnected => connectionState == ConnectionState.ConnectedHost || connectionState == ConnectionState.ConnectedClient;
+
+    public bool IsConnecting => connectionState == ConnectionState.Connecting ||
+                                UnityServices.State == ServicesInitializationState.Initializing;
+    public bool IsConnected => connectionState is ConnectionState.ConnectedHost or ConnectionState.ConnectedClient;
     public bool IsDisconnected => connectionState == ConnectionState.Disconnected;
     
     public event Action<ConnectionType> OnConnectionBegin;
@@ -73,7 +75,7 @@ public class ConnectionManager : MonoBehaviour, IConnectionManager
     {
         return new DisposableAbuse.LambdaDispose(() =>
         {
-            if (IsConnecting)
+            if (connectionState == ConnectionState.Connecting)
             {
                 connectionState = ConnectionState.Disconnected;
                 Debug.LogWarning("Connection could not complete. returning to disconnected state.");
