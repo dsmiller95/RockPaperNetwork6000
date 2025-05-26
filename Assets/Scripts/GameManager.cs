@@ -155,14 +155,16 @@ public class GameManager : NetworkBehaviour, ICoordinateGame
         {
             return;
         }
+
+        var cardLookup = allCardData.AsEnumerable().ToDictionary(x => x.cardId, x => x);
         
         if(p0Id.Value == playerId)
         {
-            p0State.Value = p0State.Value.PlayCard(playedCard);
+            p0State.Value = p0State.Value.PlayCard(playedCard, cardLookup);
         }
         else if(p1Id.Value == playerId)
         {
-            p1State.Value = p1State.Value.PlayCard(playedCard);
+            p1State.Value = p1State.Value.PlayCard(playedCard, cardLookup);
         }
     }
 

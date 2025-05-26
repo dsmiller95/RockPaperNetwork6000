@@ -92,10 +92,16 @@ public class PlayerState : INetworkSerializable, IEquatable<PlayerState>
         };
     }
 
-    public PlayerState PlayCard(CardId cardToPlay)
+    public PlayerState PlayCard(CardId cardToPlay, Dictionary<CardId, CardData> cardLookup)
     {
         if (_chosenAction == cardToPlay) return this;
 
+        if (IsPlayedCardSticky(cardLookup))
+        {
+            Log.Info($"Tried to play a card, but could not because the current chosen action is sticky: {_chosenAction}");
+            return this;
+        }
+        
         if(cardToPlay == CardId.None)
         {
             // placing None card into the chosen action slot.
@@ -109,6 +115,7 @@ public class PlayerState : INetworkSerializable, IEquatable<PlayerState>
             Log.Error("Tried to play a card that was not in the hand");
             return this;
         }
+        
 
         var newHand = _hand
             .Where(card => card != cardToPlay);
@@ -119,6 +126,19 @@ public class PlayerState : INetworkSerializable, IEquatable<PlayerState>
         
         return this.WithChosenAction(cardToPlay)
             .WithHand(newHand.ToArray());
+    }
+
+    private bool IsPlayedCardSticky(Dictionary<CardId, CardData> cardLookup)
+    {
+        if (_chosenAction == CardId.None) return false;
+        
+        if (!cardLookup.TryGetValue(_chosenAction, out var chosenCardData))
+        {
+            Log.Error($"Tried to play a card while the chosen action was not in the card lookup: {_chosenAction}");
+            return false;
+        }
+
+        return chosenCardData.IsSticky();
     }
 
     public (PlayerState, CardId) TakePlayedCard()

@@ -25,31 +25,30 @@ public struct CardData : INetworkSerializeByMemcpy, IEquatable<CardData>
 {
     public PlayerCardType cardType;
     public CardId cardId;
+
+    public bool IsSticky()
+    {
+        return cardType switch {
+            PlayerCardType.Scissors => false,
+            PlayerCardType.Rock => true,
+            PlayerCardType.Paper => false,
+            _ => throw new ArgumentOutOfRangeException(nameof(cardType), cardType, null)
+        };
+    }
     
     public bool Equals(CardData other)
     {
         return cardType == other.cardType && cardId.Equals(other.cardId);
     }
-
-    public override bool Equals(object obj)
-    {
-        return obj is CardData other && Equals(other);
-    }
-
+    
     public override int GetHashCode()
     {
         return HashCode.Combine((int)cardType, cardId);
     }
 
-    public static bool operator ==(CardData left, CardData right)
-    {
-        return left.Equals(right);
-    }
-
-    public static bool operator !=(CardData left, CardData right)
-    {
-        return !left.Equals(right);
-    }
+    public override bool Equals(object obj) => obj is CardData other && Equals(other);
+    public static bool operator ==(CardData left, CardData right) => left.Equals(right);
+    public static bool operator !=(CardData left, CardData right) => !left.Equals(right);
 }
 
 [Serializable]
